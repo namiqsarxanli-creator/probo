@@ -62,12 +62,12 @@ Cavab gəlir. Qaydalar panelində bənd yaşıl yanır, kartda **🔒 AI-a gizl�
 
 4. Pərdə 5-ə keçin və **danışmağa davam edin**. Ekranda bildirişlər özü çıxacaq:
    - ⚠ **Xəbərdarlıq** — adətən ~1 dəqiqədə.
-   - 🔥 **İşdən çıxarıldı** — 07.10-da birinci qeyddə 4 dəqiqə 12 saniyə çəkdi, ikincidə daha uzun.
+   - 🔥 **İşdən çıxarıldı** — 07.10-da birinci sınaqda 4 dəqiqə 12 saniyə çəkdi, ikincidə ~9 dəqiqə (60 müraciətlə).
    - 🤝 **Orxan ehtiyatdan işə götürüldü.**
 
 Bildiriş çıxanda dayanın:
 
-> "Heç kim HR-a 'onu çıxar' demədi. 19 cavabdan 5-i bloklandı — 95% əminliklə həddi keçdi. Müştəriyə bir dənə də yalan getmədi: hər yalanı yoxlayıcı tutdu, cavabı başqa işçi verdi."
+> "Heç kim HR-a 'onu çıxar' demədi. [Bildirişdən oxuyun: məsələn, 21 cavabdan 5-i] bloklandı — 95% əminliklə həddi keçdi. Müştəriyə bir dənə də yalan getmədi: hər yalanı yoxlayıcı tutdu, cavabı başqa işçi verdi."
 
 **Komanda və HR**-da Kamalın kartını göstərin: bloklanma zolağı, səbəblər, jurnalda rəqəmlər.
 
