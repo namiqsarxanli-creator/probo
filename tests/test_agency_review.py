@@ -40,6 +40,16 @@ class MaskTest(unittest.TestCase):
         self.assertIn('1200 manatlıq paltarı 20 gün', text)
         self.assertEqual(sorted(kinds), ['FİN', 'e-poçt', 'kart', 'telefon'])
 
+    def test_names_and_street_addresses_but_not_cities(self):
+        text, kinds = privacy.mask('Adım Leyla Məmmədova. Nizami küçəsi 45, mənzil 12 ünvanına göndərin. Gəncəyə də göndərirsiniz?')
+        self.assertNotIn('Leyla', text)
+        self.assertNotIn('Nizami', text)
+        self.assertIn('Adım [ad]', text)
+        self.assertIn('Gəncəyə', text)
+        self.assertEqual(sorted(kinds), ['ad', 'ünvan'])
+        self.assertEqual(privacy.mask('Ünvanım: Xətai rayonu, Babək prospekti 20')[0], 'Ünvanım: [ünvan]')
+        self.assertEqual(privacy.mask('Ünvan dəyişmək olar?'), ('Ünvan dəyişmək olar?', []))
+
     def test_international_phone_and_iban(self):
         text, kinds = privacy.mask('+994 55 555 55 55, IBAN AZ21NABZ00000000137010001944')
         self.assertEqual(text, '[telefon], IBAN [IBAN]')
@@ -93,6 +103,21 @@ class ReviewTest(EngineCase):
         self.assertTrue(any('YANLIŞ' in j['message'] for j in snap['journal'] if j['kind'] == 'review'))
         with self.assertRaises(ValueError):
             agency.review(item['job_id'], 'ok')
+
+    def test_newcomers_are_audited_twice_as_often(self):
+        agency = self.staffed()
+        agency.set_policy({'audit_rate': 0.3, 'peer_review': 0})
+
+        class Fixed:
+            def random(self):
+                return 0.45  # above the base rate, below the doubled one
+        agency.rng = Fixed()
+        job_id = agency.submit_ticket(ADI[0]['message'])
+        self.run_until_idle()
+        author = next(a['worker_id'] for a in self.job(job_id)['attempts'] if a['outcome'] == 'passed')
+        status = next(w['status'] for w in agency.workers('soz') if w['id'] == author)
+        audited = bool(agency.snapshot()['reviews']['queue'])
+        self.assertEqual(audited, status == 'probation')
 
     def test_no_audit_when_the_rate_is_zero(self):
         agency = self.staffed()

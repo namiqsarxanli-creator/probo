@@ -810,10 +810,15 @@ class Agency:
         # A reply with no second opinion (reviewer unavailable or unreadable) is always audited.
         unreviewed = service == 'soz' and peer is not None and peer['applies'] is None
         kind = ('flag' if final.get('flag') else 'shadow' if status == 'kölgə' else
-                'audit' if status == 'göndərildi' and (unreviewed or self.rng.random() < self.policy()['audit_rate']) else None)
+                'audit' if status == 'göndərildi' and (unreviewed or self.rng.random() < self._audit_rate(worker)) else None)
         if kind:
             self.db.execute('INSERT OR IGNORE INTO reviews(job_id, kind, created_at) VALUES (?, ?, ?)',
                             (job['id'], kind, now()))
+
+    def _audit_rate(self, worker):
+        """Newcomers are checked twice as often: least is known about them."""
+        rate = self.policy()['audit_rate']
+        return min(1.0, rate * 2) if worker['status'] == 'probation' else rate
 
     def _review(self, service):
         for action in wf.review(self.staffed(service), self.attempts(service, exam=False), self.policy()):

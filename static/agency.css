@@ -145,3 +145,7 @@ body.replaying .live-only{opacity:.4;pointer-events:none}
 .kpis.six{grid-template-columns:repeat(6,minmax(0,1fr))}
 .entry.flag{border-color:var(--warn)}
 @media(max-width:1000px){.kpis.six{grid-template-columns:repeat(2,1fr)}}
+.readiness{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.readiness .step{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;font-size:13px}
+.readiness .step.ok{border-color:#1f4a37;background:var(--ok-bg)}
+.readiness .step span{color:var(--ink)}.readiness .step small{color:var(--muted)}

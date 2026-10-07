@@ -66,6 +66,9 @@ function renderSoz() {
     ? `Telegram: <a href="${esc(tg.link)}" target="_blank" rel="noreferrer noopener">@${esc(tg.username)}</a>${tg.error ? ' · ' + esc(tg.error) : ''}`
     : `Telegram xətası: ${esc(tg.error || '')}`;
   $('#telegram-qr').hidden = !(tg && tg.link);
+  // Requested only once a bot is connected; without one the endpoint answers 404.
+  const qr = $('#telegram-qr img');
+  if (tg && tg.link && !qr.getAttribute('src')) qr.src = '/api/telegram/qr.svg';
   const names = workerNames('soz');
   $('#tickets').innerHTML = soz.jobs.map(job => ticketCard(job, names)).join('')
     || '<div class="empty">Hələ müraciət yoxdur. Yuxarıdan yazın və ya stress testini işə salın.</div>';
@@ -283,8 +286,32 @@ function regressionCard(g) {
     ${examples ? `<div class="verdicts">${examples}</div>` : ''}`;
 }
 
+// Same 95% Wilson interval the server uses for HR, so the panel never rounds in its own favour.
+function wilson(failures, trials, z = 1.96) {
+  if (!trials) return [0, 1];
+  const p = failures / trials, d = 1 + z * z / trials;
+  const centre = (p + z * z / (2 * trials)) / d;
+  const spread = z * Math.sqrt(p * (1 - p) / trials + z * z / (4 * trials * trials)) / d;
+  return [Math.max(0, centre - spread), Math.min(1, centre + spread)];
+}
+
+// When may the company trust the AI with more? Decided by human review, not by feel.
+function renderReadiness() {
+  const s = state.reviews.summary, shadow = s.shadow, sent = {reviewed: s.audit.reviewed + s.flag.reviewed, wrong: s.audit.wrong + s.flag.wrong};
+  const accept = 1 - wilson(shadow.wrong, shadow.reviewed)[1], wrongHigh = wilson(sent.wrong, sent.reviewed)[1];
+  const step = (title, ok, have, rule) => `<div class="step ${ok ? 'ok' : ''}"><b>${ok ? '✓' : '…'} ${title}</b><span>${have}</span><small>Şərt: ${rule}</small></div>`;
+  $('#readiness').innerHTML =
+    step('Kölgə → Qaralama', shadow.reviewed >= 20 && accept >= 0.8,
+      shadow.reviewed ? `${shadow.reviewed - shadow.wrong}/${shadow.reviewed} AI cavabı qəbul edildi · aşağı sərhəd ${pct(accept)}` : 'hələ kölgə müqayisəsi yoxdur',
+      'ən azı 20 müqayisə və qəbul payının 95% aşağı sərhədi ≥ 80%')
+    + step('Qaralama → Avtomatik', sent.reviewed >= 30 && wrongHigh <= 0.1,
+      sent.reviewed ? `${sent.wrong}/${sent.reviewed} yoxlamada səhv · yuxarı sərhəd ${pct(wrongHigh)}` : 'hələ audit yoxdur',
+      'ən azı 30 audit və yanlış vəd payının 95% yuxarı sərhədi ≤ 10%');
+}
+
 // ── Policy ─────────────────────────────────────────────────────────────
 function renderPolicy() {
+  renderReadiness();
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
   const form = $('#settings-form');
   Object.keys(state.policy).forEach(key => {
