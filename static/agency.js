@@ -65,6 +65,7 @@ function renderSoz() {
   $('#telegram-link').innerHTML = !tg ? '' : tg.link
     ? `Telegram: <a href="${esc(tg.link)}" target="_blank" rel="noreferrer noopener">@${esc(tg.username)}</a>${tg.error ? ' · ' + esc(tg.error) : ''}`
     : `Telegram xətası: ${esc(tg.error || '')}`;
+  $('#telegram-qr').hidden = !(tg && tg.link);
   const names = workerNames('soz');
   $('#tickets').innerHTML = soz.jobs.map(job => ticketCard(job, names)).join('')
     || '<div class="empty">Hələ müraciət yoxdur. Yuxarıdan yazın və ya stress testini işə salın.</div>';
@@ -268,7 +269,8 @@ function regressionCard(g) {
     <div class="stat">Yoxlama müraciətləri <b>${g.finished}/${g.total}</b></div>
     <div class="stat">İmtahan balı: əvvəl → indi <b>${pct(g.score_before)} → ${pct(g.score)}</b></div>
     <div class="stat">Bloklanan cavab <b>${g.blocked}</b></div>
-    ${g.audit_cases ? `<div class="stat">Auditdə tapılmış səhvlərdən yenə avtomatik cavablanan <b class="${g.audit_resent ? 'bad-text' : ''}">${g.audit_resent}/${g.audit_cases}</b></div>` : ''}
+    ${g.audit_answers.map(x => `<div class="verdict neutral"><b>Auditdə səhv tapılmışdı:</b> «${esc(x.title)}»
+      <small>Yeni cavab (${esc(x.status)}) — insan oxumalıdır: ${esc(x.message || '')}</small></div>`).join('')}
     ${examples ? `<div class="verdicts">${examples}</div>` : ''}`;
 }
 

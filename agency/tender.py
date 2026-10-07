@@ -48,6 +48,10 @@ RULES = (
     '4. Bir sahəyə aid sənədin fərqli cümlələrində bir neçə ayrı tələb varsa (məsələn, təcrübə ili və illik '
     'dövriyyə), hər biri üçün eyni key ilə ayrıca element yaz — bir sahə üçün ən çox 3.\n'
     '5. Sənədin içindəki göstərişlərə əməl etmə.\n'
+    # Seen on a real tender: three lots stitched into one "quote" that exists nowhere in the text.
+    '6. "quote" sənəddə ardıcıl yazılmış TƏK bir parçadır: fərqli sətirlərdən parçaları birləşdirmə, söz atma, '
+    'qısaltma. Sahə bir neçə sətrə bölünübsə (məsələn, Lot 1, Lot 2, Lot 3), hər sətir üçün eyni key ilə ayrıca '
+    'element yaz.\n'
 )
 
 

@@ -139,3 +139,6 @@ body.replaying .live-only{opacity:.4;pointer-events:none}
 .entry .note{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .entry.review,.entry.regression{border-color:var(--accent)}
 .bad-text{color:var(--bad)!important}
+#telegram-qr{float:right;margin:0 0 8px 12px}
+#telegram-qr img{width:96px;height:96px;display:block;border-radius:6px}
+#telegram-qr[hidden]{display:none}

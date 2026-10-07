@@ -81,6 +81,13 @@ def stats(worker_id, attempts, window=POLICY['window']):
                 avg_ms=round(sum(a.get('duration_ms') or 0 for a in own) / len(own)) if own else None)
 
 
+def dative(name):
+    """Name in the dative case, with vowel harmony: Kamala, Leylaya, Aysələ, Səbinəyə."""
+    vowels = [c for c in name.lower() if c in 'aıoueəiöü']
+    suffix = 'a' if vowels and vowels[-1] in 'aıou' else 'ə'
+    return name + ('y' if name[-1].lower() in 'aıoueəiöü' else '') + suffix
+
+
 def percent(value):
     return f'{value * 100:.0f}%'
 
@@ -115,14 +122,16 @@ def review(workers, attempts, policy=POLICY):
         best = min(eligible, key=lambda w: (report[w['id']]['cost_per_pass'], report[w['id']]['block_rate']))
         if best['status'] != 'senior':
             s = report[best['id']]
+            why = ('uğurlu cavab başına xərc ən aşağıdır' if len(eligible) > 1 else
+                   f"bloklanması {percent(policy['warn_rate'] / 2)}-dən çox olmayan yeganə işçidir")
             actions.append(dict(kind='promote', worker_id=best['id'], status='senior', stats=s, message=(
                 f"{best['name']} baş mütəxəssis təyin edildi: {s['judged']} cavabda bloklanma "
-                f"{percent(s['block_rate'])}, uğurlu cavab başına xərc ən aşağıdır.")))
+                f"{percent(s['block_rate'])}, {why}.")))
             for other in staffed:
                 if other['status'] == 'senior' and other['id'] != best['id'] and other['id'] not in leaving:
                     actions.append(dict(kind='demote', worker_id=other['id'], status='active',
                                         stats=report[other['id']],
-                                        message=f"{other['name']} baş mütəxəssis vəzifəsini {best['name']}-ə verdi."))
+                                        message=f"{other['name']} baş mütəxəssis vəzifəsini {dative(best['name'])} verdi."))
     return actions
 
 

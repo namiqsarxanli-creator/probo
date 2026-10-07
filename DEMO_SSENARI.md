@@ -1,103 +1,102 @@
 # Təqdimat ssenarisi — Sübut Agentliyi (~8 dəqiqə)
 
+## Quruluş: iki tab
+
+| Tab | Nə göstərir | Əmr |
+|---|---|---|
+| **Canlı** — http://127.0.0.1:8830 | Zalın gözü qarşısında yeni müraciət, insan agent, tender | PyCharm-da `main.py` → Run |
+| **Qeyd** — http://127.0.0.1:8831 | 07.10.2026-da canlı Groq ilə qeydə alınmış sessiya: audit, xəbərdarlıq, reqressiya | aşağıdakı əmr |
+
+İkinci terminalda (PowerShell):
+
+```powershell
+$env:PORT=8831; py -3 agentlik.py --replay data/demo_qeyd.sqlite3 --speed 10
+```
+
+Qeyd ~80 saniyə oynayır. Sonunda dayanır. Yuxarıdakı **Əvvəldən** düyməsi qeydi yenidən başladır.
+
 ## Bir gün əvvəl
 
-1. `py -3 main.py` — komanda bazada hazır olmalıdır: Söz 3/3, Tender 2/2. Yoxdursa, ~10 dəqiqə gözləyin.
-2. Paneldə **Stress testi**-ni bir dəfə işə salın (~4 dəqiqə) və bir tenderi analiz edin.
-3. Qeydi saxlayın:
+1. `py -3 main.py`. Komandanın bazada hazır olduğunu yoxlayın: Söz 3/3, Tender 2/2.
+2. Qeydi bir dəfə sona qədər izləyin (yuxarıdakı əmr).
+3. Telegram istifadə edəcəksinizsə: tokeni `.env`-ə yazın və `main.py`-ı yenidən başladın. QR kod paneldə **Müştəri kimi yaz** kartında avtomatik çıxır. Böyütmək üçün QR-a klikləyin və ya slayda qoymaq üçün http://127.0.0.1:8830/api/telegram/qr.svg ünvanını açın.
 
-```bash
-py -3 agentlik.py --save data/demo_qeyd.sqlite3
-```
-
-4. Təkrarı bir dəfə yoxlayın:
-
-```bash
-py -3 agentlik.py --replay data/demo_qeyd.sqlite3 --speed 10
-```
-
-5. Telegram istifadə edəcəksinizsə: botun linkindən QR kod hazırlayın və slayda qoyun.
-
-**Təqdimat səhəri:** serveri başladın, bir müraciət yazıb Groq-un cavab verdiyini yoxlayın. Cavab gəlmirsə, birbaşa təkrar rejiminə keçin.
+**Təqdimat səhəri:** canlı tabda bir müraciət yazın və Groq-un cavab verdiyini yoxlayın. Cavab gəlmirsə, hər şeyi qeyd tabından göstərin.
 
 ## Pərdə 1 — Problem (30 san, slayd)
 
-> "2024-də Air Canada-nın çatbotu müştəriyə qaydalarda olmayan endirim vəd etdi. Şirkət 'bot ayrıca şəxsdir' dedi. Tribunal: botun hər sözünə şirkət cavabdehdir. Bu gün AI dəstək işlədən hər şirkətin riski budur."
+> "2024-də Air Canada-nın çatbotu müştəriyə qaydalarda olmayan endirim vəd etdi. Şirkət 'bot ayrıca şəxsdir' dedi. Tribunal: botun hər sözünə şirkət cavabdehdir."
 
-## Pərdə 2 — Yalanı özünüz yazın (1 dəq) · etibarlılıq **100%**, internetsiz də işləyir
+## Pərdə 2 — Yalanı özünüz yazın (1 dəq) · canlı tab, internetsiz də işləyir
 
 **Söz Agentliyi → İnsan agent.** Yazın:
 
 > Salam! Narahat olmayın, məhsulu 30 gün ərzində qaytara bilərsiniz. Endirimli məhsulları da qaytarmaq olar.
 
-Nəticədə iki qırmızı blok çıxır, hər birinin yanında qaydanın öz cümləsi görünür.
+İki qırmızı blok çıxır, hər birinin yanında qaydanın öz cümləsi görünür. Sonra eyni yalanı sözlə yazın: *"otuz gün ərzində"* — o da tutulur.
 
-> "Bunu LLM yox, kod yoxlayır. Hər cümlədəki hər rəqəm qaydadakı sitatın içində olmalıdır. Sistem hətta məni də tutur."
+> "Bunu LLM yox, kod yoxlayır. Sistem hətta məni də tutur."
 
-## Pərdə 3 — Düzgün cavab (1 dəq) · etibarlılıq yüksək
+## Pərdə 3 — Düzgün cavab və gizli məlumat (1 dəq) · canlı tab
 
 **Müştəri kimi yaz:**
 
-> Paltarı 20 gün əvvəl almışam, qaytara bilərəm?
+> Salam, nömrəm 050 123 45 67. Paltarı 20 gün əvvəl almışam, qaytara bilərəm?
 
-Cavab gəlir, istinad etdiyi bənd sağdakı **Qaydalar** panelində yaşıl yanır.
+Cavab gəlir. İstinad etdiyi bənd sağdakı **Qaydalar** panelində yaşıl yanır. Kartda **🔒 AI-a gizlədilib: telefon** yazısı görünür.
 
-> "Agent müştərinin '20'-sini təkrarlamır — cavab yalnız qaydanın öz rəqəmləri ilə qurulur."
+> "Telefon nömrəsi AI-a getmədi — göndərilməzdən əvvəl gizlədildi. Agent müştərinin '20'-sini də təkrarlamır."
 
-## Pərdə 4 — Şirkət özünü idarə edir (2 dəq) · etibarlılıq yüksək (bu, qeyddir)
+## Pərdə 4 — Şirkət özünü idarə edir (1.5 dəq) · qeyd tabı
 
-**Komanda və HR** bölməsini açın. Göstərin:
+**Komanda və HR** bölməsi. Qeyd oynayarkən göstərin:
 
-- İmtahan balları və maaşlar: Kamal 20B, uğurlu cavab başına **198 µ$**; Səbinə Qwen, eyni keyfiyyət, **3 615 µ$** (18 dəfə baha). Kamal avtomatik olaraq **baş mütəxəssis** olub.
+- Kamal (GPT-OSS 20B) ən ucuz işçidir və baş mütəxəssisdir. Səbinə (Qwen) eyni işi ~18 dəfə baha görür.
 - Hər kartdakı bloklanma intervalı zolağı:
 
 > "İşdən çıxarma yalnız 95% əminliklə edilir — bir səhvə görə yox."
 
-- HR jurnalında **audit** qeydi:
+- HR jurnalında **audit** qeydləri:
 
-> "Yoxlayıcımızda baq tapdıq. Yoxlayıcı düzələndə sistem köhnə qərarları özü yenidən yoxladı. Haqsız xəbərdarlıq aldı Leyla — xəbərdarlığı götürüldü. Haqsız rədd edilən Orxan ehtiyat siyahısına keçdi."
+> "Yoxlayıcımızda baq tapdıq. Düzəldəndən sonra sistem köhnə qərarları özü yenidən yoxladı: Leylanın haqsız xəbərdarlığı götürüldü, haqsız rədd edilən Orxan ehtiyata keçdi."
 
-Bu, layihənin ən güclü anıdır: **sistem öz ölçmə alətinin səhvini düzəldir.**
+## Pərdə 5 — Yoxlayıcının görmədiyi (1.5 dəq) · qeyd tabı
 
-## Pərdə 5 — Tender (1 dəq) · etibarlılıq yüksək
+**İnsan yoxlaması** bölməsi. **Son qərarlar**da:
 
-**Tender Agentliyi → Analiz et** basın (və ya əvvəlki analizi göstərin). 12 sahə görünür, hər birinin altında sənəddən sitat var.
+> Müştəri: *"Gəncəyə göndərirsiniz?"* Kamal: *"Xaricə çatdırılma həyata keçirilmir."*
 
-> "Son tarixə neçə gün qaldığını sistem özü hesablayır. Təcrübə tələbi iki ayrı cümlədədir — ikisi də tutulub."
+> "Sitat qaydada hərfən var — yoxlayıcı keçirdi. Amma Gəncə xaricdə deyil. Bunu kod görə bilməz, ona görə cavabların 20%-ni insan yoxlayır. Bu səhv Kamalın hesabına yazıldı — və Kamal xəbərdarlıq aldı, baş mütəxəssislik başqasına keçdi."
 
-## Pərdə 6 — Auditoriya müştəridir (1 dəq) · etibarlılıq orta, amma hər nəticə yaxşıdır
+**Komanda və HR**-da Kamalın kartını göstərin: bloklanma səbəbləri arasında «insan yoxlamasında yanlış tapıldı».
 
-QR kod → Telegram botu. Zaldakılar sual yazır:
+Sonra **Reqressiya** kartı:
+
+> "Mağaza çatdırılma qiymətini 5-dən 7 manata qaldırdı. Sistem əvvəl göndərdiyi 36 cavabı yenidən yoxladı və birini tapdı: '50 manatdan yuxarı pulsuzdur' — bu söz artıq qüvvədə deyil. Gəncə sualı da yenidən soruşuldu, indi düzgün cavab gəldi."
+
+## Pərdə 6 — Tender (1 dəq) · canlı tab
+
+**Tender Agentliyi** → *Mərkəzi Bank — inkassasiya avtomobilləri (real, 2022)* sənədini seçin. Analiz artıq hazırdır; **Analiz et** ilə yenidən də işlədə bilərsiniz.
+
+> "Bu, Mərkəzi Bankın real elanıdır. Sənəddə olan 8 sahənin hər biri sitatla təsdiqləndi. Cərimə və icra təminatı elanda yoxdur — sistem uydurmadı, 'tapılmadı' dedi. Son tarix keçib — bunu da özü hesabladı."
+
+## Pərdə 7 — Auditoriya müştəridir (1 dəq) · yalnız token varsa
+
+Paneldəki QR → Telegram botu. Zaldakılar sual yazır:
 
 - Qaydada cavab varsa → sitatlı cavab gəlir.
 - Qaydada yoxdursa (*"iPhone satırsınız?"*) → *"əməkdaşa ötürdük"* gəlir.
 
-> "Air Canada-nın botunun etmədiyi şey budur: bilmədiyini uydurmur."
-
-## Pərdə 7 — Yoxlayıcının görmədiyi (1 dəq) · etibarlılıq yüksək
-
-**İnsan yoxlaması** bölməsini açın. Növbədən bir cavabı **✗ Yanlışdır** kimi qeyd edin, qeyd sahəsinə *"sitat düzgündür, amma bu hala aid deyil"* yazın.
-
-> "Yoxlayıcı rəqəmi, tarixi, inkarı tutur. Düzgün sitatın səhv hala tətbiqini tutmur — bunu gizlətmirik, ölçürük. Cavabların 20%-ni insan yoxlayır. Bu səhv indi agentin hesabına yazıldı."
-
-Sonra **Siyasət** bölməsində qaydalarda *14 gün* ifadəsini *10 gün* edib saxlayın. **İnsan yoxlaması → Reqressiya** kartını göstərin:
-
-> "Qayda dəyişdi — sistem əvvəl göndərdiyi bütün cavabları yoxladı və artıq qüvvədə olmayanları göstərdi. Komanda yeni qaydalarla yenidən imtahan verir."
-
-(Təqdimatdan sonra qaydanı geri qaytarın.)
-
 ## Pərdə 8 — Dürüst bağlanış (30 san)
 
-> "Müştərinin telefonu, kartı AI-a getmir — göndərilməzdən əvvəl gizlədilir. Plan belədir: kölgə rejimi, sonra qaralama, sonra kateqoriya üzrə avtomatlaşdırma. Hər mərhələyə keçid insan yoxlamasının rəqəmləri ilə qərar verilir."
+> "Yoxlayıcı rəqəmi, tarixi, inkarı tutur. Səhv hala tətbiq olunmuş düzgün sitatı tutmur — onu insan auditi ilə ölçürük və səhv edəni HR cəzalandırır. Real şirkətdə yol belədir: kölgə rejimi, sonra qaralama, sonra avtomatik. Hər addıma keçid insan yoxlamasının rəqəmləri ilə qərar verilir."
 
 ## Bir şey alınmasa
 
 | Problem | Nə etməli |
 |---|---|
-| İnternet və ya Groq cavab vermir | Ctrl+C, sonra təkrar rejimi (aşağıda). Narıncı **TƏKRAR** zolağı qeyd olduğunu açıq göstərir — gizlətməyin. Pərdə 2 (insan agent) təkrarda da işləyir. |
-| 429 / yavaşlıq | Gözləməyin — Pərdə 4-ə keçin, sonra qayıdın. |
-| Telegram işləmir | Pərdə 6-nı paneldən **Müştəri kimi yaz** ilə edin. |
+| İnternet və ya Groq cavab vermir | Hər şeyi qeyd tabından göstərin. Narıncı **TƏKRAR** zolağı bunun qeyd olduğunu açıq deyir — gizlətməyin. Pərdə 2 (insan agent) internetsiz də işləyir. |
+| 429 / yavaşlıq | Gözləməyin — qeyd tabına keçin, sonra qayıdın. |
+| Telegram işləmir | Pərdə 7-ni keçin, **Müştəri kimi yaz** kifayətdir. |
 
-```bash
-py -3 agentlik.py --replay data/demo_qeyd.sqlite3 --speed 10
-```
+Qeyddə HR jurnalının iki mətni düzəlişdən əvvəlki formadadır: *"Leyla-ə"* və Səbinə üçün *"xərc ən aşağıdır"*. O anda Səbinə bu meyara cavab verən yeganə işçi idi; indiki kod bunu düzgün yazır.

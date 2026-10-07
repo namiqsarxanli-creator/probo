@@ -4,6 +4,7 @@ Same protections as the studio: loopback only, Host and Origin checks,
 a per-process CSRF token on every write, and a CSP that forbids inline
 script and style.
 """
+import io
 import json
 import logging
 import os
@@ -74,6 +75,8 @@ def make_handler(agency, bridge=None):
                                            journal=[j for j in snap['journal'] if j['service'] == service]),
                                       ensure_ascii=False, indent=2).encode()
                     return self.reply(200, body, download=f'audit-{service}.json')
+                if parts.path == '/api/telegram/qr.svg':
+                    return self.reply(200, qr_svg(bridge.status()['link'] if bridge else None), 'image/svg+xml')
                 if parts.path == '/health':
                     return self.reply(200, {'ok': True})
             except ValueError as exc:
@@ -134,6 +137,20 @@ def make_handler(agency, bridge=None):
             pass
 
     return Handler
+
+
+def qr_svg(link):
+    """The bot link as a scannable QR code for the slide or the projector."""
+    if not link:
+        raise ValueError('Telegram botu qoşulmayıb.')
+    try:
+        import segno  # optional: pip install segno
+    except ImportError:
+        raise ValueError('QR üçün segno paketi lazımdır: py -3 -m pip install segno') from None
+    buffer = io.BytesIO()
+    # Dark on white with a quiet zone: what phone cameras read most reliably.
+    segno.make(link, error='m').save(buffer, kind='svg', scale=10, border=4, dark='#0d1117', light='#ffffff')
+    return buffer.getvalue()
 
 
 def _public(doc):

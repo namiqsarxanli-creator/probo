@@ -73,6 +73,29 @@ class AgencyHttpTest(unittest.TestCase):
         code, _ = self.status_of(lambda: self.post('/api/mode', {'mode': 'chaos'}))
         self.assertEqual(code, 400)
 
+    def test_qr_needs_a_connected_bot(self):
+        code, body = self.status_of(lambda: urllib.request.urlopen(f'http://127.0.0.1:{self.port}/api/telegram/qr.svg', timeout=10))
+        self.assertEqual(code, 404)
+        self.assertIn('Telegram', body['error'])
+
+    def test_qr_encodes_the_bot_link(self):
+        try:
+            import segno  # noqa: F401
+        except ImportError:
+            self.skipTest('segno is optional')
+
+        class Bridge:
+            def status(self):
+                return dict(username='soz_demo_bot', error=None, link='https://t.me/soz_demo_bot')
+
+        server = ThreadingHTTPServer(('127.0.0.1', 0), make_handler(self.agency, Bridge()))
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        with urllib.request.urlopen(f'http://127.0.0.1:{server.server_port}/api/telegram/qr.svg', timeout=10) as response:
+            self.assertEqual(response.headers['Content-Type'], 'image/svg+xml')
+            self.assertIn(b'<svg', response.read())
+
     def test_panel_is_served_with_a_strict_policy(self):
         with urllib.request.urlopen(f'http://127.0.0.1:{self.port}/', timeout=10) as response:
             self.assertIn("style-src 'self'", response.headers['Content-Security-Policy'])

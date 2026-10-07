@@ -889,20 +889,23 @@ class Agency:
         report = self.setting('regression')
         if not report or not seen(report['started_at']):
             return None
-        jobs = self._all("SELECT id, status, label FROM jobs WHERE source='reqressiya' AND document_version=?",
+        jobs = self._all("SELECT id, title, status, label, result FROM jobs WHERE source='reqressiya' AND document_version=?",
                          (report['version'],))
         finished = [j for j in jobs if j['status'] not in ('növbədə', 'işlənir')]
-        exam_scores, audit_resent, blocked = [], 0, 0
+        exam_scores, audit_answers, blocked = [], [], 0
         for job in finished:
             label = json.loads(job['label'] or '{}')
             tries = self._all('SELECT outcome, evaluation FROM attempts WHERE job_id=? ORDER BY started_at, rowid', (job['id'],))
             blocked += sum(1 for t in tries if t['outcome'] == 'blocked')
             if label.get('kind') == 'audit':
-                audit_resent += int(job['status'] == 'yoxlanıldı')
+                # Answered again is not the same as answered right: a person reads the new answer.
+                result = json.loads(job['result'] or '{}')
+                audit_answers.append(dict(title=job['title'][:120], status=job['status'],
+                                          message=result.get('message') or result.get('reason')))
             elif tries:
                 exam_scores.append(json.loads(tries[-1]['evaluation']).get('score', 0.0))
         before = [w['exam_score'] for w in self.staffed('soz') if w['exam_score'] is not None]
-        return dict(report, total=len(jobs), finished=len(finished), blocked=blocked, audit_resent=audit_resent,
+        return dict(report, total=len(jobs), finished=len(finished), blocked=blocked, audit_answers=audit_answers,
                     score=round(sum(exam_scores) / len(exam_scores), 3) if exam_scores else None,
                     score_before=round(sum(before) / len(before), 3) if before else None)
 
