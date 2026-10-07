@@ -64,6 +64,17 @@ class ReviewTest(unittest.TestCase):
         self.assertEqual(self.act(actions, 'promote')[0]['worker_id'], 'b')
         self.assertEqual(self.act(actions, 'demote')[0]['worker_id'], 'a')
 
+    def test_senior_keeps_the_title_through_small_wobbles(self):
+        staff = [worker('a', 'senior', name='Leyla'), worker('b', name='Səbinə')]
+        # Leyla slips to 6% (over the 5% bar for newcomers, under the 10% warning); Səbinə is only 10% cheaper.
+        record = attempts('a', 16, 1, cost=100) + attempts('b', 20, 0, cost=90)
+        self.assertFalse(self.act(wf.review(staff, record), 'promote'))
+
+    def test_a_clearly_cheaper_colleague_still_takes_over(self):
+        staff = [worker('a', 'senior', name='Leyla'), worker('b', name='Kamal')]
+        record = attempts('a', 16, 1, cost=100) + attempts('b', 20, 0, cost=50)
+        self.assertEqual(self.act(wf.review(staff, record), 'promote')[0]['worker_id'], 'b')
+
     def test_fired_worker_cannot_be_promoted(self):
         record = attempts('a', 11, 9, cost=1)
         actions = wf.review([worker('a')], record)

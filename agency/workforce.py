@@ -131,6 +131,15 @@ def review(workers, attempts, policy=POLICY):
     leaving = {a['worker_id'] for a in actions if a['kind'] == 'fire'}
     eligible = [w for w in staffed if w['id'] not in leaving and report[w['id']]['judged'] >= policy['probation']
                 and report[w['id']]['block_rate'] <= policy['warn_rate'] / 2 and report[w['id']]['cost_per_pass']]
+    # Hysteresis, or the title flaps between two workers whose rates hover near the line:
+    # the senior keeps it while still under the warning threshold, unless a clearly
+    # (20%) cheaper reliable colleague appears.
+    changed = {a['worker_id'] for a in actions}
+    current = next((w for w in staffed if w['status'] == 'senior' and w['id'] not in changed), None)
+    if current and report[current['id']]['cost_per_pass'] and report[current['id']]['block_rate'] is not None \
+            and report[current['id']]['block_rate'] <= policy['warn_rate']:
+        held = report[current['id']]['cost_per_pass']
+        eligible = [w for w in eligible if w['id'] != current['id'] and report[w['id']]['cost_per_pass'] < held * 0.8]
     if eligible:
         best = min(eligible, key=lambda w: (report[w['id']]['cost_per_pass'], report[w['id']]['block_rate']))
         if best['status'] != 'senior':
