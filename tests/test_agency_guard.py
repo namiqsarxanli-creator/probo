@@ -208,3 +208,13 @@ class SecondLiveRunTest(unittest.TestCase):
         self.assertTrue(verdict['ok'], verdict['problems'])
         # ...while the attributive use stays positive.
         self.assertFalse(guard.is_negative('Ölçüsü uyğun gəlməyən geyim 14 gün ərzində dəyişdirilə bilər'))
+
+
+class BoundTest(unittest.TestCase):
+    def test_minimum_and_maximum_phrasing_is_not_negation(self):
+        for text in ('Dövriyyə 500 000 AZN-dən az olmamalıdır', 'Müddət 30 gündən çox olmamalıdır',
+                     'Qiymət smeta məbləğini aşmamalıdır', 'Təcrübə 3 ildən az olmayaraq'):
+            self.assertFalse(guard.is_negative(text), text)
+        # ...while a real prohibition in the same sentence still is.
+        self.assertTrue(guard.is_negative('Dövriyyə 500 000 AZN-dən az olmamalıdır və subpodrat qadağandır'))
+        self.assertTrue(guard.is_negative('Təklif təminatı tələb olunmur'))

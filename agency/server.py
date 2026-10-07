@@ -81,6 +81,14 @@ def make_handler(agency):
 
         def do_POST(self):
             port = self.server.server_port
+            # Read the body before any refusal: closing a socket with unread data
+            # makes Windows reset the connection, and the client sees an abort
+            # instead of the 403 it should get.
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+            except ValueError:
+                size = -1
+            body = self.rfile.read(size) if 0 < size <= 200_000 else b''
             origin = self.headers.get('Origin')
             if (not self.host_ok() or (origin and origin not in (f'http://127.0.0.1:{port}', f'http://localhost:{port}'))
                     or not secrets.compare_digest(self.headers.get('X-CSRF-Token', ''), token)):
@@ -88,10 +96,9 @@ def make_handler(agency):
             if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                 return self.reply(415, {'error': 'JSON tələb olunur.'})
             try:
-                size = int(self.headers.get('Content-Length', '0'))
                 if not 0 < size <= 200_000:
                     raise ValueError('Sorğu ölçüsü uyğun deyil.')
-                data = json.loads(self.rfile.read(size))
+                data = json.loads(body)
                 if not isinstance(data, dict):
                     raise ValueError('JSON obyekt tələb olunur.')
                 path = urlsplit(self.path).path

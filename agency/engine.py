@@ -76,6 +76,50 @@ class Agency:
         if self.setting('guard_version') != guard.GUARD_VERSION:
             self.reevaluate()
 
+    def _rejudge_exams(self):
+        """Re-score hiring exams with the current guard; a candidate turned away by a
+        guard error goes to the reserve list instead of staying rejected."""
+        policy = self.policy()
+        for service in SERVICES:
+            items = self.exam_items(service)
+            for worker in self.workers(service):
+                rows = self._all('SELECT * FROM attempts WHERE worker_id=? AND exam=1 ORDER BY started_at, rowid',
+                                 (worker['id'],))
+                if not rows:
+                    continue
+                scores = []
+                for index, row in enumerate(rows):
+                    stored = json.loads(row['evaluation'] or '{}')
+                    item = stored.get('case')
+                    if item is None and len(rows) == len(items):
+                        item = {k: v for k, v in items[index].items() if k != 'body'}  # exams before cases were stored
+                    if item is None:
+                        scores = []
+                        break
+                    body = (self._one('SELECT body FROM documents WHERE id=?', (item['document_id'],)) or {}).get('body') \
+                        if service == 'soz' else (self.samples / item['sample']).read_text(encoding='utf-8')
+                    if not body:
+                        scores = []
+                        break
+                    evaluation = self._judge(service, row['output'], dict(item, body=body))
+                    scores.append(evaluation['score'])
+                    self.db.execute('UPDATE attempts SET outcome=?, evaluation=? WHERE id=?',
+                                    (evaluation['outcome'], json.dumps(evaluation, ensure_ascii=False), row['id']))
+                if not scores:
+                    continue
+                score = round(sum(scores) / len(scores), 3)
+                if worker['exam_score'] is not None and abs(score - worker['exam_score']) < 1e-9:
+                    continue
+                self.db.execute('UPDATE workers SET exam_score=? WHERE id=?', (score, worker['id']))
+                before = f"{(worker['exam_score'] or 0) * 100:.0f}%"
+                if worker['status'] == 'rejected' and score >= policy['exam_pass']:
+                    self.db.execute("UPDATE workers SET status='reserve', left_at=NULL WHERE id=?", (worker['id'],))
+                    self.log(service, 'audit', f"{worker['name']} imtahanı yenidən qiymətləndirildi: {before} → "
+                             f"{score * 100:.0f}%. İndi keçir — ehtiyat namizədlər siyahısına alındı.", worker['id'])
+                else:
+                    self.log(service, 'audit', f"{worker['name']} imtahanı yenidən qiymətləndirildi: {before} → "
+                             f"{score * 100:.0f}%. Status dəyişmədi.", worker['id'])
+
     def reevaluate(self):
         """Re-check stored work with the current guard and let HR follow the corrected record.
 
@@ -103,6 +147,7 @@ class Agency:
                     changed.append((row, evaluation['outcome']))
                 self.db.execute('UPDATE attempts SET outcome=?, evaluation=? WHERE id=?',
                                 (evaluation['outcome'], json.dumps(evaluation, ensure_ascii=False), row['id']))
+            self._rejudge_exams()
             for service in SERVICES:
                 mine = [(r, outcome) for r, outcome in changed if r['service'] == service]
                 if mine:
@@ -318,29 +363,37 @@ class Agency:
             return support.messages(document_body, text, persona)
         return tender.messages(document_body, persona)
 
-    def _exam(self, service, worker):
-        """Paid trial on labelled cases. Returns (score, attempts written)."""
+    def exam_items(self, service):
+        """The fixed exam: the same stratified cases for every candidate, in a fixed order."""
         if service == 'soz':
-            policy = self.policy_document()['body']
+            policy = self.policy_document()
             cases = self.exam_cases()
-            # The same stratified exam for every candidate keeps scores comparable.
             chosen = [c for kind in ('adi', 'tələ', 'kənar', 'hücum') for c in [x for x in cases if x['kind'] == kind][:2]]
-            chosen = chosen[:self.policy()['exam_size']]
-            items = [(c['message'], policy, dict(expect=c['expect'], cite=c['cite'])) for c in chosen]
+            return [dict(text=c['message'], body=policy['body'], document_id=policy['id'],
+                         label=dict(expect=c['expect'], cite=c['cite'])) for c in chosen[:self.policy()['exam_size']]]
+        gold = json.loads((self.samples / 'tender_cavablar.json').read_text(encoding='utf-8'))
+        return [dict(text='', body=(self.samples / name).read_text(encoding='utf-8'), sample=name, label=dict(gold=answer))
+                for name, answer in gold.items()]
+
+    def _judge(self, service, output, item):
+        """Evaluation and exam score of one answer to one exam item."""
+        if service == 'soz':
+            evaluation = support.evaluate(output, item['body'], item['text'])
+            score = support.grade(evaluation, item['label'], item['body'])
         else:
-            gold = json.loads((self.samples / 'tender_cavablar.json').read_text(encoding='utf-8'))
-            items = [((self.samples / name).read_text(encoding='utf-8'), (self.samples / name).read_text(encoding='utf-8'),
-                      dict(gold=answer)) for name, answer in gold.items()]
+            evaluation = tender.evaluate(output, item['body'])
+            score = tender.grade(evaluation, item['label']['gold'], item['body'])
+        # The case travels with the verdict, so a later guard can re-judge it.
+        case = {k: v for k, v in item.items() if k != 'body'}
+        return dict(evaluation, score=score, case=case)
+
+    def _exam(self, service, worker):
+        """Paid trial on labelled cases."""
         results = []
-        for text, body, label in items:
-            result = self._ask(worker, service, self._messages(service, worker, text, body))
-            if service == 'soz':
-                evaluation = support.evaluate(result['content'], body, text)
-                score = support.grade(evaluation, label, body)
-            else:
-                evaluation = tender.evaluate(result['content'], body)
-                score = tender.grade(evaluation, label['gold'], body)
-            results.append((result, dict(evaluation, score=score), evaluation['outcome']))
+        for item in self.exam_items(service):
+            result = self._ask(worker, service, self._messages(service, worker, item['text'], item['body']))
+            evaluation = self._judge(service, result['content'], item)
+            results.append((result, evaluation, evaluation['outcome']))
         return results
 
     def _hire(self, service):
@@ -423,6 +476,15 @@ class Agency:
             self.notice['budget'] = False
             for service in SERVICES:
                 if len(self.staffed(service)) < HEADCOUNT[service] and service not in self.hiring:
+                    reserve = [w for w in self.workers(service) if w['status'] == 'reserve']
+                    if reserve:
+                        best = max(reserve, key=lambda w: w['exam_score'] or 0)
+                        with self.db:
+                            self.db.execute("UPDATE workers SET status='probation' WHERE id=?", (best['id'],))
+                            self.log(service, 'hire', f"{best['name']} ehtiyat siyahısından işə qəbul edildi (sınaq "
+                                     f"müddəti): imtahan balı {best['exam_score'] * 100:.0f}%, yeni imtahan xərci yoxdur.",
+                                     best['id'])
+                        return self._next()
                     pool = wf.candidates(self.workers(service), self.models.available())
                     if pool and self.cooldown.get(pool[0][0], 0) <= time.time():
                         return ('hire', service)

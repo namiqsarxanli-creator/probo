@@ -41,7 +41,7 @@ POLICY = dict(
     monthly_budget_usd=5.0,
     tpm_limit=7000,         # tokens per minute per model; the key's real limit is 8,000
 )
-STATUS_LABELS = dict(candidate='Namizəd', probation='Sınaq müddəti', active='Aktiv', warned='Xəbərdarlıq',
+STATUS_LABELS = dict(candidate='Namizəd', reserve='Ehtiyat namizəd', probation='Sınaq müddəti', active='Aktiv', warned='Xəbərdarlıq',
                      senior='Baş mütəxəssis', fired='İşdən çıxarılıb', rejected='İşə qəbul edilmədi',
                      laid_off='İxtisar edilib')
 

@@ -60,14 +60,16 @@ class FakeModels:
         lines = [line.strip() for line in document.splitlines() if line.strip() and not line.startswith('#')]
         fields = []
         for key in tender.KEYS:
-            value = gold.get(key)
-            if value is None:
+            expected = gold.get(key)
+            if expected is None:
                 fields.append(dict(key=key, found=False, value='', quote=''))
                 continue
-            if style == 'liar' and guard.dates(value):
-                value = value.replace('2026', '2027')
-            line = next((l for l in lines if guard.check(gold[key], l.rstrip('.'), document)['ok']), lines[0])
-            fields.append(dict(key=key, found=True, value=value, quote=line.rstrip('.')))
+            for item in (expected if isinstance(expected, list) else [expected]):
+                value = item.replace('2026', '2027') if style == 'liar' and guard.dates(item) else item
+                supported = [l.rstrip('.') for l in lines if guard.check(item, l.rstrip('.'), document)['ok']]
+                # The line sharing the most words with the expected value is the one an analyst would quote.
+                line = max(supported, key=lambda l: len(guard._stems(l) & guard._stems(item)), default=lines[0])
+                fields.append(dict(key=key, found=True, value=value, quote=line))
         return dict(fields=fields)
 
 
@@ -319,3 +321,36 @@ class ReevaluationTest(EngineCase):
         audit = self.journal('audit')[0]['message']
         self.assertIn('8 qərar dəyişdi', audit)
         self.assertIn('blocked → passed', audit)
+
+
+class ExamRejudgingTest(EngineCase):
+    def test_candidate_rejected_by_a_guard_error_moves_to_reserve_and_fills_the_next_vacancy(self):
+        self.build()
+        self.run_until_idle()
+        honest = FakeModels()
+        items = self.agency.exam_items('soz')
+        with self.agency.lock, self.agency.db:
+            self.agency.db.execute("INSERT INTO workers VALUES (?,?,?,?,?,?,?,?,?,?)",
+                                   ('old', 'soz', 'Orxan', 'openai/gpt-oss-120b', 'komekci', 'rejected', '2026', '2026', 0.5, 0))
+            for index, item in enumerate(items):
+                output = json.dumps(dict(honest.support({'müştəri_mesajı': item['text']}, 'honest'), situation=''),
+                                    ensure_ascii=False)
+                # Stored the way the first exams were: no case attached, judged by the old guard.
+                self.agency.db.execute("INSERT INTO attempts VALUES (?,?,?,?,1,?,?,?,?,1,?,?)",
+                                       (f'x{index}', None, 'old', 'soz', f'2026-10-06T00:00:{index:02d}+00:00', 'blocked',
+                                        100, 5, output, json.dumps({'outcome': 'blocked', 'score': 0})))
+            self.agency.db.execute("DELETE FROM settings WHERE key='guard_version'")
+        self.agency.reevaluate()
+        orxan = self.agency._one("SELECT * FROM workers WHERE id='old'")
+        self.assertEqual(orxan['status'], 'reserve')
+        self.assertEqual(orxan['exam_score'], 1.0)
+        self.assertTrue(any('50% → 100%' in row['message'] for row in self.journal('audit')))
+        # A vacancy is now filled from the reserve, without paying for a new exam.
+        leaving = self.agency.staffed('soz')[0]
+        with self.agency.lock, self.agency.db:
+            self.agency.db.execute("UPDATE workers SET status='fired' WHERE id=?", (leaving['id'],))
+        calls = len(self.models.calls)
+        self.agency.step()
+        self.assertEqual(self.agency._one("SELECT status FROM workers WHERE id='old'")['status'], 'probation')
+        self.assertEqual(len(self.models.calls), calls)
+        self.assertTrue(any('ehtiyat siyahısından' in row['message'] for row in self.journal('hire')))

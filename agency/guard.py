@@ -49,7 +49,7 @@ NEGATIVE_FORM = re.compile(r'[^\W\d_]{2,}(?:m[iuü]r(?:lar|lər)?\b|m[aeə]z\b|m
 # later at most ("qaytarılmayan məhsullar siyahısına daxildir"); as a plain
 # attribute it is not ("uyğun gəlməyən geyim 14 gün ərzində dəyişdirilə bilər").
 NEGATIVE_PREDICATE = re.compile(r'[^\W\d_]{3,}m[aeə]y[aeə]n(?:\s+[^\W\d_]+){0,3}?\s+[^\W\d_]*d[iuü]r\b')
-GUARD_VERSION = 3  # bump whenever a rule changes, so stored verdicts are re-checked
+GUARD_VERSION = 5  # bump whenever a rule changes, so stored verdicts are re-checked
 COURTESY = {fold(w) for w in ('salam', 'hörmətli', 'təşəkkür', 'edirik', 'edirəm', 'sağ', 'olun', 'xahiş',
                               'gününüz', 'xeyir', 'müraciət', 'müraciətiniz', 'üçün', 'və', 'bizə',
                               'yazdığınız', 'olsun', 'xoş', 'günlər', 'arzulayırıq', 'hər', 'zaman',
@@ -117,9 +117,14 @@ def _same(a, b):
     return abs(a - b) <= max(abs(a), abs(b), 1.0) * 1e-9
 
 
+# "500 000 AZN-dən az olmamalıdır" means "at least 500 000": a bound, not a prohibition.
+# Tender and contract language is full of these; they must not read as negation.
+BOUND = re.compile(r'\b(?:az|çox|artiq|aşaği|yuxari)\s+olma\w*|\başma(?:mali|z|y)\w*')
+
+
 def is_negative(text):
-    folded = fold(text)
-    return (bool(set(words(text)) & NEGATIVE_WORDS) or bool(NEGATIVE_FORM.search(folded))
+    folded = BOUND.sub(' ', fold(text))
+    return (bool(set(WORD.findall(folded)) & NEGATIVE_WORDS) or bool(NEGATIVE_FORM.search(folded))
             or bool(NEGATIVE_PREDICATE.search(folded)))
 
 

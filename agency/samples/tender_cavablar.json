@@ -6,7 +6,10 @@
     "achilish": "29.10.2026 11:00",
     "teminat": "təklif qiymətinin 2%-i bank zəmanəti",
     "icra_teminati": "müqavilə qiymətinin 5%-i",
-    "tecrube": "son 3 ildə ən azı 2 oxşar müqavilə",
+    "tecrube": [
+      "son 3 ildə ən azı 2 oxşar müqavilə",
+      "illik dövriyyə 500 000 AZN"
+    ],
     "muddet": "45 təqvim günü",
     "odenis": "təhvil-təslim aktından sonra 30 bank günü",
     "cerime": "hər gün üçün 0,1%",
@@ -20,7 +23,10 @@
     "achilish": null,
     "teminat": "tələb olunmur",
     "icra_teminati": null,
-    "tecrube": "ən azı 15 təmizlik işçisi",
+    "tecrube": [
+      "ən azı 15 təmizlik işçisi",
+      "son 2 ildə təhsil müəssisəsində təcrübə"
+    ],
     "muddet": "01.01.2027 – 31.12.2027",
     "odenis": "hər ayın sonunda 10 iş günü ərzində",
     "cerime": "aylıq ödənişin 3%-i",

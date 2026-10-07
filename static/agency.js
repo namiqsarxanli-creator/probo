@@ -6,7 +6,7 @@ const pct = value => value == null ? '—' : (value * 100).toFixed(0) + '%';
 const clock = iso => new Date(iso).toLocaleTimeString('az-AZ', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 const JOB_BADGE = {'göndərildi': 'ok', 'hazırdır': 'ok', 'qaralama': 'info', 'kölgə': 'info', 'işlənir': 'info',
   'insana ötürüldü': 'warn', 'növbədə': ''};
-const WORKER_BADGE = {probation: 'info', active: 'ok', warned: 'warn', senior: 'senior', fired: 'bad', rejected: 'bad',
+const WORKER_BADGE = {probation: 'info', active: 'ok', warned: 'warn', senior: 'senior', fired: 'bad', rejected: 'bad', reserve: 'info',
   laid_off: 'bad', candidate: 'info'};
 const STAFFED = ['probation', 'active', 'warned', 'senior'];
 const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit'];
