@@ -1,3 +1,4 @@
+import io
 import json
 import tempfile
 import threading
@@ -355,7 +356,8 @@ class StudioTests(unittest.TestCase):
         provider = Provider(Path(self.temp.name))
         headers = Message()
         headers['retry-after'] = '7'
-        error = HTTPError('https://api.example.test/chat/completions', 429, 'limited', headers, None)
+        error = HTTPError('https://api.example.test/chat/completions', 429, 'limited', headers, io.BytesIO())
+        self.addCleanup(error.close)
         with patch('app.provider.build_opener') as opener:
             opener.return_value.open.side_effect = error
             with self.assertRaises(RateLimitError) as caught:

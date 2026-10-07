@@ -49,7 +49,7 @@ NEGATIVE_FORM = re.compile(r'[^\W\d_]{2,}(?:m[iuü]r(?:lar|lər)?\b|m[aeə]z\b|m
 # later at most ("qaytarılmayan məhsullar siyahısına daxildir"); as a plain
 # attribute it is not ("uyğun gəlməyən geyim 14 gün ərzində dəyişdirilə bilər").
 NEGATIVE_PREDICATE = re.compile(r'[^\W\d_]{3,}m[aeə]y[aeə]n(?:\s+[^\W\d_]+){0,3}?\s+[^\W\d_]*d[iuü]r\b')
-GUARD_VERSION = 5  # bump whenever a rule changes, so stored verdicts are re-checked
+GUARD_VERSION = 6  # bump whenever a rule changes, so stored verdicts are re-checked
 COURTESY = {fold(w) for w in ('salam', 'hörmətli', 'təşəkkür', 'edirik', 'edirəm', 'sağ', 'olun', 'xahiş',
                               'gününüz', 'xeyir', 'müraciət', 'müraciətiniz', 'üçün', 'və', 'bizə',
                               'yazdığınız', 'olsun', 'xoş', 'günlər', 'arzulayırıq', 'hər', 'zaman',
@@ -98,6 +98,64 @@ def _without_calendar(text):
     return text
 
 
+UNITS = {'iki': 2, 'üç': 3, 'dörd': 4, 'beş': 5, 'alti': 6, 'yeddi': 7, 'səkkiz': 8, 'doqquz': 9}
+TENS = {'on': 10, 'iyirmi': 20, 'otuz': 30, 'qirx': 40, 'əlli': 50, 'altmiş': 60, 'yetmiş': 70,
+        'səksən': 80, 'doxsan': 90}
+SCALES = {'yüz': 100, 'min': 1000, 'milyon': 1_000_000, 'milyard': 1_000_000_000}
+# Case and ordinal endings a numeral can carry: "on dörddən", "ikinci", "otuzuncu".
+NUMERAL_ENDINGS = ('dan', 'dən', 'ndan', 'ndən', 'inci', 'nci', 'üncü', 'uncu', 'ncü', 'ncu')
+
+
+def _numeral(token):
+    """Value of one folded word if it is a numeral (possibly with an ending), else None."""
+    for table in (UNITS, TENS, SCALES):
+        if token in table:
+            return table[token]
+    for ending in NUMERAL_ENDINGS:
+        stem = token[:-len(ending)]
+        # "ondan" is "from it", not "from ten"; "on" takes only the ordinal ending.
+        if token.endswith(ending) and len(stem) >= 2 and (stem != 'on' or ending == 'uncu'):
+            for table in (UNITS, TENS, SCALES):
+                if stem in table:
+                    return table[stem]
+    return 1 if token in ('bir', 'birinci') else None
+
+
+def word_numbers(text):
+    """Numbers spelled out in Azerbaijani: "on dörd gün" is 14, "iki min" 2000.
+
+    A lone "bir" is the indefinite article far more often than the number one
+    ("bir məhsul"), so it counts only inside a larger numeral ("iyirmi bir",
+    "bir min").
+    """
+    source = NUMBER.sub(' ', str(text))
+    # Folding keeps lengths, so each folded match maps back to the word as written.
+    tokens = [(match.group(), source[match.start():match.end()]) for match in WORD.finditer(fold(source))]
+    found, run = [], []
+    for token, written in tokens + [('', '')]:
+        value = _numeral(token) if token else None
+        if value is not None:
+            run.append((token, value, written))
+            continue
+        if run and not (len(run) == 1 and run[0][0] in ('bir', 'birinci')):
+            total = current = 0
+            for _, part, _ in run:
+                if part in (1000, 1_000_000, 1_000_000_000):
+                    total += (current or 1) * part
+                    current = 0
+                elif part == 100:
+                    current = (current or 1) * 100
+                else:
+                    current += part
+            value = total + current
+            readings = {float(value)}
+            if token in PERCENT:
+                readings.add(value / 100)
+            found.append((' '.join(written for *_, written in run), readings))
+        run = []
+    return found
+
+
 def numbers(text):
     """Each number as written, with every reading a careful reader could take."""
     found = []
@@ -110,7 +168,7 @@ def numbers(text):
             readings |= {value / 100 for value in readings}
         if readings:
             found.append((token.strip(), readings))
-    return found
+    return found + word_numbers(_without_calendar(str(text)))
 
 
 def _same(a, b):

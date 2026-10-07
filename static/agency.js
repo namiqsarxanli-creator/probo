@@ -5,15 +5,15 @@ const usd = micro => '$' + ((micro || 0) / 1e6).toFixed(micro && micro < 1e5 ? 5
 const pct = value => value == null ? '—' : (value * 100).toFixed(0) + '%';
 const clock = iso => new Date(iso).toLocaleTimeString('az-AZ', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 const JOB_BADGE = {'göndərildi': 'ok', 'hazırdır': 'ok', 'qaralama': 'info', 'kölgə': 'info', 'işlənir': 'info',
-  'insana ötürüldü': 'warn', 'növbədə': ''};
+  'insana ötürüldü': 'warn', 'növbədə': '', 'yoxlanıldı': 'info'};
 const WORKER_BADGE = {probation: 'info', active: 'ok', warned: 'warn', senior: 'senior', fired: 'bad', rejected: 'bad', reserve: 'info',
   laid_off: 'bad', candidate: 'info'};
 const STAFFED = ['probation', 'active', 'warned', 'senior'];
-const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit'];
+const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit', 'review', 'regression'];
 const OUTCOME = {passed: 'yoxlamadan keçdi', blocked: 'BLOKLANDI', escalated: 'insana ötürdü', error: 'xəta'};
 
 let state = null, csrf = '', lastKey = '', tab = 'soz', selTicket = null, selTender = null, tenderDocId = null;
-let journalFilter = 'hr', policyVersion = null;
+let journalFilter = 'hr', policyVersion = null, queueKey = '';
 const dirty = new Set();
 const docCache = {};
 
@@ -79,7 +79,8 @@ function renderSoz() {
 }
 
 function ticketCard(job, names) {
-  const label = job.label ? ` · etiket: ${esc(job.label.kind)}` : '';
+  const label = (job.label ? ` · etiket: ${esc(job.label.kind)}` : '')
+    + (job.pii && job.pii.length ? ` · 🔒 AI-a gizlədilib: ${esc(job.pii.join(', '))}` : '');
   const attempts = job.attempts.map(a => {
     const who = names[a.worker_id] ? `${names[a.worker_id].name} (${names[a.worker_id].model_label})` : 'agent';
     const ev = a.evaluation;
@@ -221,6 +222,56 @@ function workerCard(w) {
     <div class="stat">Maaş (1M token) <b>$${state.models[w.model].input} / $${state.models[w.model].output}</b></div></div>`;
 }
 
+// ── Human review ──────────────────────────────────────────────────────
+function renderReview() {
+  const r = state.reviews, a = r.summary.audit, s = r.summary.shadow;
+  const upper = a.reviewed ? `≤ ${pct(a.wrong_high)}` : '—';
+  $('#review-kpis').innerHTML = kpi('Audit edilib', `${a.reviewed}<small> / ${a.reviewed + a.pending}</small>`)
+    + kpi('Auditdə tapılan səhv', a.wrong, a.wrong ? 'red' : 'green')
+    + kpi('Yanlış vəd payı (95%)', upper)
+    + kpi('Kölgə: AI cavabı qəbul', s.reviewed ? `${s.reviewed - s.wrong}/${s.reviewed}` : '—')
+    + kpi('İnsan cavabı qaydaya uyğun', s.human_replies ? `${s.human_ok}/${s.human_replies}` : '—');
+  const key = r.queue.map(q => q.job_id).join(',') + '|' + Boolean(state.replay);
+  if (key !== queueKey) {
+    queueKey = key;
+    $('#review-queue').innerHTML = r.queue.map(reviewItem).join('')
+      || '<div class="empty">Növbə boşdur. Göndərilən cavabların bir hissəsi (Siyasət → audit payı) və kölgə rejimindəki bütün qaralamalar bura düşür.</div>';
+  }
+  $('#review-recent').innerHTML = r.recent.map(x => `<div class="entry ${x.verdict === 'wrong' ? 'fire' : 'hire'}">
+      <time>${clock(x.reviewed_at)} · ${x.kind === 'audit' ? 'audit' : 'kölgə'} · ${x.verdict === 'wrong' ? 'YANLIŞ' : 'düzgün'}</time>
+      ${esc(x.title)}${x.note ? `<small class="note">Qeyd: ${esc(x.note)}</small>` : ''}
+      ${x.reply ? `<small class="note">İnsanın cavabı ${x.reply_ok ? 'qaydalarla təsdiqləndi' : 'yoxlayıcıdan KEÇMƏZDİ'}: «${esc(x.reply)}»</small>` : ''}</div>`).join('')
+    || '<div class="empty">Hələ qərar yoxdur.</div>';
+  $('#regression').innerHTML = regressionCard(state.regression);
+}
+
+function reviewItem(q) {
+  const shadow = q.kind === 'shadow';
+  const lines = q.sentences.map(s => `<div class="verdict ok">${esc(s.text)}<small>Qayda: «${esc(s.quote)}»</small></div>`).join('');
+  return `<form class="ticket review-item" data-review="${q.job_id}">
+    <div class="head"><div><div class="msg">${esc(q.title)}</div><div class="src">${esc(q.source)} · ${clock(q.created_at)} · ${esc(q.worker || '')}</div></div>
+    <span class="badge ${shadow ? 'info' : 'warn'}">${shadow ? 'kölgə — göndərilmədi' : 'audit — göndərilib'}</span></div>
+    ${q.situation ? `<div class="who">Agentin anladığı: ${esc(q.situation)}</div>` : ''}
+    <div class="verdicts">${lines}</div>
+    ${shadow ? '<textarea name="reply" rows="2" maxlength="2000" placeholder="Müştəriyə siz nə yazdınız? (yoxlayıcı sizin cavabınızı da yoxlayacaq)"></textarea>' : ''}
+    <input name="note" maxlength="400" placeholder="Qeyd (məs.: sitat düzgündür, amma bu hala aid deyil)">
+    <div class="row"><button class="primary" type="submit" value="ok">✓ Düzgündür</button>
+    <button class="danger-ghost" type="submit" value="wrong">✗ Yanlışdır</button></div></form>`;
+}
+
+function regressionCard(g) {
+  if (!g) return '<div class="empty">Qaydalar hələ dəyişməyib. Siyasət bölməsində yeni versiya saxlananda: əvvəl göndərilmiş cavablar yeni mətnlə yenidən yoxlanır, komanda imtahan suallarını və auditdə tapılmış səhvləri yenidən cavablandırır.</div>';
+  const examples = g.examples.map(e => `<div class="verdict bad">${esc(e.text)}<small>«${esc(e.title)}» · ${esc(e.problem)}</small></div>`).join('');
+  return `<div class="stat">Versiya <b>${esc(g.previous)} → ${esc(g.version)}</b></div>
+    <div class="stat">Əvvəl göndərilmiş cavab yoxlandı <b>${g.checked}</b></div>
+    <div class="stat">Yeni qaydalarla artıq təsdiqlənmir <b class="${g.broken ? 'bad-text' : ''}">${g.broken}</b></div>
+    <div class="stat">Yoxlama müraciətləri <b>${g.finished}/${g.total}</b></div>
+    <div class="stat">İmtahan balı: əvvəl → indi <b>${pct(g.score_before)} → ${pct(g.score)}</b></div>
+    <div class="stat">Bloklanan cavab <b>${g.blocked}</b></div>
+    ${g.audit_cases ? `<div class="stat">Auditdə tapılmış səhvlərdən yenə avtomatik cavablanan <b class="${g.audit_resent ? 'bad-text' : ''}">${g.audit_resent}/${g.audit_cases}</b></div>` : ''}
+    ${examples ? `<div class="verdicts">${examples}</div>` : ''}`;
+}
+
 // ── Policy ─────────────────────────────────────────────────────────────
 function renderPolicy() {
   document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
@@ -254,11 +305,11 @@ function render() {
   const link = $('#link');
   link.textContent = state.replay ? 'qeyd göstərilir — AI çağırılmır' : state.ready ? 'AI bağlıdır' : 'AI bağlantısı yoxdur';
   link.classList.toggle('live', state.ready);
-  renderSoz(); renderTender(); renderTeam(); renderPolicy();
+  renderSoz(); renderTender(); renderTeam(); renderReview(); renderPolicy();
 }
 
 function chooseTab(next) {
-  tab = ['soz', 'tender', 'team', 'policy'].includes(next) ? next : 'soz';
+  tab = ['soz', 'tender', 'team', 'review', 'policy'].includes(next) ? next : 'soz';
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + tab));
   if (location.hash.slice(1) !== tab) history.replaceState(null, '', '#' + tab);
@@ -339,6 +390,17 @@ onSubmit('#settings-form', async data => {
 onSubmit('#policy-form', async data => {
   const result = await post('/api/policy', {body: data.body});
   dirty.delete('policy'); toast('Yeni qaydalar versiyası: ' + result.document.version);
+});
+$('#review-queue').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.target, button = event.submitter;
+  form.querySelectorAll('button').forEach(b => { b.disabled = true; });
+  try {
+    const data = Object.fromEntries(new FormData(form));
+    await post('/api/review', {job_id: form.dataset.review, verdict: button.value, reply: data.reply || '', note: data.note || ''});
+    queueKey = '';
+    toast(button.value === 'wrong' ? 'Səhv qeydə alındı: agentin hesabına yazıldı və reqressiya dəstinə əlavə olunacaq.' : 'Cavab düzgün kimi qeyd edildi.');
+  } catch (error) { toast(error.message, true); form.querySelectorAll('button').forEach(b => { b.disabled = false; }); }
 });
 $('#settings-form').addEventListener('input', event => dirty.add(event.target.name));
 $('#policy-form').addEventListener('input', () => dirty.add('policy'));

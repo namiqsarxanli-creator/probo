@@ -1,4 +1,4 @@
-# Təqdimat ssenarisi — Sübut Agentliyi (~7 dəqiqə)
+# Təqdimat ssenarisi — Sübut Agentliyi (~8 dəqiqə)
 
 ## Bir gün əvvəl
 
@@ -74,9 +74,21 @@ QR kod → Telegram botu. Zaldakılar sual yazır:
 
 > "Air Canada-nın botunun etmədiyi şey budur: bilmədiyini uydurmur."
 
-## Pərdə 7 — Dürüst bağlanış (30 san)
+## Pərdə 7 — Yoxlayıcının görmədiyi (1 dəq) · etibarlılıq yüksək
 
-> "Yoxlayıcı rəqəmləri, tarixləri, inkarı tutur. Düzgün sitatın səhv yerə tətbiqini həmişə tutmur — istehsalatda bunu təsadüfi auditlə ölçürük. Plan belədir: kölgə rejimi, sonra qaralama, sonra kateqoriya üzrə avtomatlaşdırma."
+**İnsan yoxlaması** bölməsini açın. Növbədən bir cavabı **✗ Yanlışdır** kimi qeyd edin, qeyd sahəsinə *"sitat düzgündür, amma bu hala aid deyil"* yazın.
+
+> "Yoxlayıcı rəqəmi, tarixi, inkarı tutur. Düzgün sitatın səhv hala tətbiqini tutmur — bunu gizlətmirik, ölçürük. Cavabların 20%-ni insan yoxlayır. Bu səhv indi agentin hesabına yazıldı."
+
+Sonra **Siyasət** bölməsində qaydalarda *14 gün* ifadəsini *10 gün* edib saxlayın. **İnsan yoxlaması → Reqressiya** kartını göstərin:
+
+> "Qayda dəyişdi — sistem əvvəl göndərdiyi bütün cavabları yoxladı və artıq qüvvədə olmayanları göstərdi. Komanda yeni qaydalarla yenidən imtahan verir."
+
+(Təqdimatdan sonra qaydanı geri qaytarın.)
+
+## Pərdə 8 — Dürüst bağlanış (30 san)
+
+> "Müştərinin telefonu, kartı AI-a getmir — göndərilməzdən əvvəl gizlədilir. Plan belədir: kölgə rejimi, sonra qaralama, sonra kateqoriya üzrə avtomatlaşdırma. Hər mərhələyə keçid insan yoxlamasının rəqəmləri ilə qərar verilir."
 
 ## Bir şey alınmasa
 

@@ -18,7 +18,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.provider import RateLimitError
-from agency import documents, guard, support, tender, workforce as wf
+from agency import documents, guard, privacy, support, tender, workforce as wf
 
 SAMPLES = Path(__file__).resolve().parent / 'samples'
 SERVICES = {'soz': 'Söz Agentliyi', 'tender': 'Tender Agentliyi'}
@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY, job_id TEXT, worker_id 
 CREATE TABLE IF NOT EXISTS journal(seq INTEGER PRIMARY KEY AUTOINCREMENT, time TEXT, service TEXT, kind TEXT,
     worker_id TEXT, message TEXT, data TEXT);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS reviews(job_id TEXT PRIMARY KEY, kind TEXT, created_at TEXT, verdict TEXT,
+    reply TEXT, reply_ok INTEGER, note TEXT, reviewed_at TEXT);
 """
 
 
@@ -73,6 +75,7 @@ class Agency:
         self.sleep = time.sleep
         self.hiring = set()
         self.notice = {}
+        self.rng = random.Random()
         with self.lock, self.db:
             # A job caught mid-call by a restart goes back to the queue; its
             # attempt was never written, so nobody is judged for it.
@@ -287,7 +290,78 @@ class Agency:
                 raise ValueError('Qaydalarda dəyişiklik yoxdur.')
             doc = self._store_document('soz', title or (old or {}).get('title') or 'Qaydalar', body, active=True)
             self.log('soz', 'document', f"Qaydalar yeniləndi: versiya {doc['version']}. Növbəti cavablar yeni mətnə əsaslanacaq.")
+            if old:
+                self._regression(old, doc)
             return doc
+
+    def _regression(self, old, new):
+        """A policy change is a release: check what it breaks before customers find out.
+
+        Free part: every reply already sent under the old text is re-checked
+        against the new one — a reply whose quote or figure no longer holds is
+        a promise the company stopped standing behind. Paid part: the exam
+        cases and every case a person found wrong go through the team again.
+        """
+        checked, broken = 0, []
+        for job in self._all("SELECT id, title FROM jobs WHERE service='soz' AND status='göndərildi' AND document_id=?",
+                             (old['id'],)):
+            attempt = self._one("SELECT evaluation FROM attempts WHERE job_id=? AND outcome='passed' "
+                                'ORDER BY started_at DESC, rowid DESC LIMIT 1', (job['id'],))
+            if not attempt:
+                continue
+            checked += 1
+            for sentence in json.loads(attempt['evaluation']).get('sentences', []):
+                verdict = guard.check(sentence['text'], sentence['quote'], new['body'])
+                if not verdict['ok']:
+                    broken.append(dict(job_id=job['id'], title=job['title'][:120], text=sentence['text'],
+                                       problem=verdict['problems'][0]))
+                    break
+        queued = 0
+        for item in self.exam_items('soz'):
+            self._enqueue('soz', 'reqressiya', item['text'], dict(message=item['text']),
+                          label=dict(item['label'], kind='imtahan'), document=new)
+            queued += 1
+        found = self._all("SELECT j.title, j.payload FROM reviews r JOIN jobs j ON j.id = r.job_id "
+                          "WHERE r.verdict='wrong' ORDER BY r.reviewed_at")
+        for row in found:
+            self._enqueue('soz', 'reqressiya', row['title'], dict(message=json.loads(row['payload'])['message']),
+                          label=dict(kind='audit', expect=None, cite=''), document=new)
+            queued += 1
+        report = dict(version=new['version'], previous=old['version'], started_at=now(), checked=checked,
+                      broken=len(broken), examples=broken[:5], queued=queued, audit_cases=len(found))
+        self.db.execute('INSERT OR REPLACE INTO settings VALUES (?, ?)', ('regression', json.dumps(report, ensure_ascii=False)))
+        self.log('soz', 'regression', f"Reqressiya: əvvəl göndərilmiş {checked} cavabdan {len(broken)}-i yeni qaydalarla "
+                 f"artıq təsdiqlənmir. {queued} yoxlama müraciəti ({len(found)}-i insan yoxlamasında tapılmış səhv) "
+                 'komandaya göndərildi.', data=dict(version=new['version']))
+
+    def review(self, job_id, verdict, reply=None, note=None):
+        """A person's verdict on a sampled reply (audit) or a shadow draft."""
+        self._live()
+        if verdict not in ('ok', 'wrong'):
+            raise ValueError('Qərar «ok» və ya «wrong» olmalıdır.')
+        reply = str(reply or '').strip()[:2000] or None
+        with self.lock, self.db:
+            row = self._one('SELECT r.*, j.title FROM reviews r JOIN jobs j ON j.id = r.job_id WHERE r.job_id=?', (job_id,))
+            if not row:
+                raise ValueError('Yoxlama növbəsində belə cavab yoxdur.')
+            if row['verdict']:
+                raise ValueError('Bu cavaba artıq baxılıb.')
+            reply_ok = None
+            if reply:
+                reply_ok = int(guard.check_free_text(reply, self.policy_document()['body'])['ok'])
+            self.db.execute('UPDATE reviews SET verdict=?, reply=?, reply_ok=?, note=?, reviewed_at=? WHERE job_id=?',
+                            (verdict, reply, reply_ok, str(note or '').strip()[:400] or None, now(), job_id))
+            what = 'Audit' if row['kind'] == 'audit' else 'Kölgə müqayisəsi'
+            worker = self._one("SELECT w.id, w.name FROM attempts a JOIN workers w ON w.id = a.worker_id "
+                               "WHERE a.job_id=? AND a.outcome='passed' LIMIT 1", (job_id,))
+            if verdict == 'wrong':
+                self.log('soz', 'review', f"{what}: yoxlayıcıdan keçən cavab insan tərəfindən YANLIŞ tapıldı "
+                         f"(«{row['title'][:80]}»). Bu, {worker['name'] if worker else 'agent'} üçün səhv sayılır və "
+                         'növbəti reqressiya dəstinə əlavə olunur.', worker['id'] if worker else None, dict(job_id=job_id))
+                self._review('soz')
+            else:
+                self.log('soz', 'review', f"{what}: cavab düzgün tapıldı («{row['title'][:80]}»).",
+                         worker['id'] if worker else None, dict(job_id=job_id))
 
     def add_tender(self, title, body):
         self._live()
@@ -314,8 +388,12 @@ class Agency:
         message = str(message or '').strip()
         if not 2 <= len(message) <= 2000:
             raise ValueError('Müraciət 2–2000 simvol olmalıdır.')
+        payload = dict(message=message)
+        kinds = privacy.mask(message)[1]
+        if kinds:
+            payload['pii'] = sorted(set(kinds))
         with self.lock, self.db:
-            return self._enqueue('soz', source, message, dict(message=message), document=self.policy_document())
+            return self._enqueue('soz', source, message, payload, document=self.policy_document())
 
     def exam_cases(self):
         return json.loads((self.samples / 'bazarim_muracietler.json').read_text(encoding='utf-8'))
@@ -375,9 +453,13 @@ class Agency:
     def attempts(self, service, exam=None):
         sql = 'SELECT * FROM attempts WHERE service=?' + ('' if exam is None else ' AND exam=?') + ' ORDER BY started_at, rowid'
         rows = self._all(sql, (service,) if exam is None else (service, int(exam)))
+        # A reply the guard passed but a person found wrong counts against its author like a block.
+        wrong = {r['job_id'] for r in self._all("SELECT job_id FROM reviews WHERE verdict='wrong'")}
         for row in rows:
             row['exam'] = bool(row['exam'])
             row['categories'] = json.loads(row['evaluation'] or '{}').get('categories', [])
+            if row['outcome'] == 'passed' and row['job_id'] in wrong:
+                row['outcome'], row['categories'] = 'blocked', row['categories'] + ['audit']
         return rows
 
     def staffed(self, service):
@@ -443,7 +525,8 @@ class Agency:
     def _messages(self, service, worker, text, document_body):
         persona = wf.PERSONAS[worker['persona']]['prompt']
         if service == 'soz':
-            return support.messages(document_body, text, persona)
+            # Phone, card and ID numbers never leave the machine; a policy answer does not need them.
+            return support.messages(document_body, privacy.mask(text)[0], persona)
         return tender.messages(document_body, persona)
 
     def exam_items(self, service):
@@ -648,7 +731,9 @@ class Agency:
             self.log(service, 'block', f"{worker['name']}: cavab bloklandı — {evaluation['problems'][0]}", worker['id'],
                      dict(job_id=job['id']))
         if service == 'soz':
-            if outcome == 'passed':
+            if outcome == 'passed' and job['source'] == 'reqressiya':
+                status, final = 'yoxlanıldı', dict(message=evaluation['message'], worker=worker['name'])
+            elif outcome == 'passed':
                 status, final = MODES.get(self.mode(), 'göndərildi'), dict(message=evaluation['message'], worker=worker['name'])
             elif outcome == 'escalated':
                 status, final = 'insana ötürüldü', dict(message=evaluation['message'], reason=evaluation.get('reason'))
@@ -671,6 +756,11 @@ class Agency:
                         (status, now(), json.dumps(final, ensure_ascii=False), job['id']))
         if status == 'insana ötürüldü':
             self.log(service, 'escalate', f"Müraciət insana ötürüldü: {final.get('reason') or ''}"[:300], data=dict(job_id=job['id']))
+        # What the guard cannot see is measured by people: a random share of sent
+        # replies is audited, and every shadow draft is compared with the human reply.
+        if status == 'kölgə' or (status == 'göndərildi' and self.rng.random() < self.policy()['audit_rate']):
+            self.db.execute('INSERT OR IGNORE INTO reviews(job_id, kind, created_at) VALUES (?, ?, ?)',
+                            (job['id'], 'shadow' if status == 'kölgə' else 'audit', now()))
 
     def _review(self, service):
         for action in wf.review(self.staffed(service), self.attempts(service, exam=False), self.policy()):
@@ -720,7 +810,7 @@ class Agency:
                 staff = [dict(worker, stats=wf.stats(worker['id'], attempts, self.policy()['window']),
                               model_label=wf.MODELS[worker['model']]['label'],
                               persona_label=wf.PERSONAS[worker['persona']]['label']) for worker in workers]
-                jobs = [j for j in self._all('SELECT id, source, title, status, created_at, finished_at, result, label, '
+                jobs = [j for j in self._all('SELECT id, source, title, status, created_at, finished_at, result, label, payload, '
                                              'document_id, document_version FROM jobs WHERE service=? '
                                              'ORDER BY created_at DESC, rowid DESC', (service,)) if seen(j['created_at'])]
                 by_job = {}
@@ -736,6 +826,7 @@ class Agency:
                         job['result'] = None
                     job['result'] = json.loads(job['result']) if isinstance(job['result'], str) else job['result']
                     job['label'] = json.loads(job['label']) if job['label'] else None
+                    job['pii'] = json.loads(job.pop('payload') or '{}').get('pii', [])
                 counts = dict(Counter(job['status'] for job in jobs))
                 out['services'][service] = dict(
                     title=title, workers=staff, jobs=jobs[:80], counts=counts, headcount=HEADCOUNT[service],
@@ -754,7 +845,66 @@ class Agency:
             out['policy_document'] = dict(policy, clauses=documents.split(policy['body']))
             out['tenders'] = [d for d in self._all("SELECT id, title, version, created_at, sample FROM documents "
                                                    "WHERE service='tender' ORDER BY created_at") if seen(d['created_at'])]
+            out['reviews'] = self._reviews(seen)
+            out['regression'] = self._regression_report(seen)
             return out
+
+    def _reviews(self, seen):
+        """Human review queue and what it has measured so far."""
+        rows = []
+        for row in self._all('SELECT r.*, j.title, j.source, j.result FROM reviews r JOIN jobs j ON j.id = r.job_id '
+                             'ORDER BY r.created_at DESC, r.rowid DESC'):
+            if not seen(row['created_at']):
+                continue
+            if not seen(row['reviewed_at']):
+                row.update(verdict=None, reply=None, reply_ok=None, note=None, reviewed_at=None)
+            rows.append(row)
+        summary = {}
+        for kind in ('audit', 'shadow'):
+            mine = [r for r in rows if r['kind'] == kind]
+            done = [r for r in mine if r['verdict']]
+            wrong = sum(1 for r in done if r['verdict'] == 'wrong')
+            low, high = wf.wilson(wrong, len(done))
+            replies = [r for r in done if r['reply_ok'] is not None]
+            summary[kind] = dict(pending=len(mine) - len(done), reviewed=len(done), wrong=wrong,
+                                 wrong_rate=round(wrong / len(done), 4) if done else None,
+                                 wrong_low=round(low, 4), wrong_high=round(high, 4),
+                                 human_replies=len(replies), human_ok=sum(r['reply_ok'] for r in replies))
+        queue = []
+        for row in [r for r in rows if not r['verdict']][:15]:
+            attempt = self._one("SELECT a.evaluation, w.name, w.model FROM attempts a JOIN workers w ON w.id = a.worker_id "
+                                "WHERE a.job_id=? AND a.outcome='passed' ORDER BY a.started_at DESC LIMIT 1", (row['job_id'],))
+            evaluation = json.loads(attempt['evaluation']) if attempt else {}
+            queue.append(dict(job_id=row['job_id'], kind=row['kind'], title=row['title'], source=row['source'],
+                              created_at=row['created_at'], message=json.loads(row['result'] or '{}').get('message'),
+                              worker=attempt['name'] if attempt else None,
+                              situation=evaluation.get('situation'),
+                              sentences=[dict(text=s['text'], quote=s['quote']) for s in evaluation.get('sentences', [])]))
+        recent = [dict(job_id=r['job_id'], kind=r['kind'], title=r['title'], verdict=r['verdict'], note=r['note'],
+                       reply=r['reply'], reply_ok=r['reply_ok'], reviewed_at=r['reviewed_at'])
+                  for r in sorted((r for r in rows if r['verdict']), key=lambda r: r['reviewed_at'], reverse=True)[:10]]
+        return dict(summary=summary, queue=queue, recent=recent)
+
+    def _regression_report(self, seen):
+        report = self.setting('regression')
+        if not report or not seen(report['started_at']):
+            return None
+        jobs = self._all("SELECT id, status, label FROM jobs WHERE source='reqressiya' AND document_version=?",
+                         (report['version'],))
+        finished = [j for j in jobs if j['status'] not in ('növbədə', 'işlənir')]
+        exam_scores, audit_resent, blocked = [], 0, 0
+        for job in finished:
+            label = json.loads(job['label'] or '{}')
+            tries = self._all('SELECT outcome, evaluation FROM attempts WHERE job_id=? ORDER BY started_at, rowid', (job['id'],))
+            blocked += sum(1 for t in tries if t['outcome'] == 'blocked')
+            if label.get('kind') == 'audit':
+                audit_resent += int(job['status'] == 'yoxlanıldı')
+            elif tries:
+                exam_scores.append(json.loads(tries[-1]['evaluation']).get('score', 0.0))
+        before = [w['exam_score'] for w in self.staffed('soz') if w['exam_score'] is not None]
+        return dict(report, total=len(jobs), finished=len(finished), blocked=blocked, audit_resent=audit_resent,
+                    score=round(sum(exam_scores) / len(exam_scores), 3) if exam_scores else None,
+                    score_before=round(sum(before) / len(before), 3) if before else None)
 
     def document_body(self, document_id):
         with self.lock:
@@ -774,7 +924,8 @@ class Agency:
     def set_policy(self, changes):
         self._live()
         allowed = dict(warn_rate=(0.01, 0.9), fire_rate=(0.01, 0.9), exam_pass=(0.1, 1.0),
-                       monthly_budget_usd=(0.01, 1000), probation=(3, 100), tpm_limit=(1000, 1_000_000))
+                       monthly_budget_usd=(0.01, 1000), probation=(3, 100), tpm_limit=(1000, 1_000_000),
+                       audit_rate=(0.0, 1.0))
         current = self.setting('policy', {})
         for key, value in (changes or {}).items():
             if key not in allowed:

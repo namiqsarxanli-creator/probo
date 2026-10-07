@@ -132,3 +132,10 @@ body.replaying .live-only{opacity:.4;pointer-events:none}
 .ticket .approve{margin-top:9px;font-size:12px;padding:6px 12px}
 #telegram-link a{color:var(--accent)}
 #replay-bar[hidden],#toast[hidden]{display:none}
+.kpi b small{font-size:13px;color:var(--muted);font-weight:400}
+.review-item{cursor:default;display:flex;flex-direction:column;gap:8px}
+.review-item .verdicts{margin-top:0}
+.review-item .row{margin-top:0}
+.entry .note{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.entry.review,.entry.regression{border-color:var(--accent)}
+.bad-text{color:var(--bad)!important}

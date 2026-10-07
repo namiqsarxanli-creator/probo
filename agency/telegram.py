@@ -20,7 +20,8 @@ LOG = logging.getLogger(__name__)
 WELCOME = ('Salam! Bu, nümunə mağaza «Bazarım» üçün Söz Agentliyinin demo dəstək botudur.\n\n'
            'Sualınızı yazın — cavab yalnız mağazanın yazılı qaydalarına əsaslanır və hər cümlə '
            'göndərilməzdən əvvəl o qaydalarla yoxlanılır. Qaydalarda cavabı olmayan suallar əməkdaşa ötürülür.\n\n'
-           'Qeyd: mesajınız cavab hazırlamaq üçün AI provayderinə göndərilir. Şəxsi məlumat yazmayın.')
+           'Qeyd: mesajınız cavab hazırlamaq üçün AI provayderinə göndərilir. Telefon, kart, e-poçt və FİN '
+           'göndərilməzdən əvvəl gizlədilir, amma yenə də şəxsi məlumat yazmamağınız tövsiyə olunur.')
 TABLE = ('CREATE TABLE IF NOT EXISTS telegram(job_id TEXT PRIMARY KEY, chat_id INTEGER NOT NULL, '
          'delivered INTEGER NOT NULL DEFAULT 0, created_at TEXT)')
 

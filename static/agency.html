@@ -17,6 +17,7 @@
     <button data-tab="soz" class="on">Söz Agentliyi</button>
     <button data-tab="tender">Tender Agentliyi</button>
     <button data-tab="team">Komanda və HR</button>
+    <button data-tab="review">İnsan yoxlaması</button>
     <button data-tab="policy">Siyasət</button>
   </nav>
   <div class="status"><span id="spend">—</span><span id="link" class="dot">bağlantı</span></div>
@@ -100,6 +101,21 @@
     </div>
   </section>
 
+  <!-- REVIEW -->
+  <section id="tab-review" class="tab">
+    <div class="kpis" id="review-kpis"></div>
+    <div class="grid">
+      <div class="col">
+        <div class="card"><h2>Yoxlama növbəsi <small>yoxlayıcıdan keçmiş cavablar — düzgündürmü?</small></h2>
+          <div id="review-queue" class="feed live-only"></div></div>
+      </div>
+      <div class="col side">
+        <div class="card"><h2>Reqressiya <small>qaydalar dəyişəndə</small></h2><div id="regression"></div></div>
+        <div class="card"><h2>Son qərarlar</h2><div id="review-recent" class="journal"></div></div>
+      </div>
+    </div>
+  </section>
+
   <!-- POLICY -->
   <section id="tab-policy" class="tab live-only">
     <div class="grid">
@@ -120,6 +136,7 @@
             <label>Sınaq müddəti (cavab sayı)<input name="probation" type="number" step="1" min="3" max="100"></label>
             <label>İşə qəbul imtahanı keçid balı<input name="exam_pass" type="number" step="any" min="0.1" max="1"></label>
             <label>Aylıq büdcə (USD)<input name="monthly_budget_usd" type="number" step="any" min="0.01" max="1000"></label>
+            <label>Audit payı (göndərilən cavabların neçəsini insan yoxlasın)<input name="audit_rate" type="number" step="any" min="0" max="1"></label>
             <button class="primary" type="submit">Saxla</button>
           </form>
         </div>

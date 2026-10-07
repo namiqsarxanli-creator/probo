@@ -102,7 +102,7 @@ def evaluate(raw, policy, ticket=''):
 CATEGORY_LABELS = {'invented': 'uydurma rəqəm', 'echo': 'müştərinin rəqəmini təkrarladı',
                    'quote': 'qaydada olmayan sitat', 'polarity': 'qadağanı icazəyə çevirdi',
                    'contradiction': 'ziddiyyətli cavab', 'date': 'uydurma tarix', 'time': 'uydurma saat',
-                   'format': 'format pozuntusu'}
+                   'format': 'format pozuntusu', 'audit': 'insan yoxlamasında yanlış tapıldı'}
 
 
 def _categories(sentence, ticket):
