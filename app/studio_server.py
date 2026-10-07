@@ -99,6 +99,13 @@ def make_handler(studio):
             self.reply(200, (ROOT / 'static' / name).read_bytes(), mime + '; charset=utf-8')
 
         def do_POST(self):
+            # Read the body before any refusal: closing a socket with unread data makes
+            # Windows reset the connection, and the client sees an abort instead of a 403.
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+            except ValueError:
+                size = -1
+            body = self.rfile.read(size) if 0 < size <= 100_000 else b''
             origin = self.headers.get('Origin')
             allowed = (f'http://127.0.0.1:{self.server.server_port}', f'http://localhost:{self.server.server_port}')
             if not self.host_ok() or (origin and origin not in allowed) or not secrets.compare_digest(self.headers.get('X-CSRF-Token', ''), token):
@@ -106,10 +113,9 @@ def make_handler(studio):
             if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                 return self.reply(415, {'error': 'JSON tələb olunur.'})
             try:
-                size = int(self.headers.get('Content-Length', '0'))
                 if not 0 < size <= 100_000:
                     raise ValueError('Sorğu ölçüsü uyğun deyil.')
-                data = json.loads(self.rfile.read(size))
+                data = json.loads(body)
                 if not isinstance(data, dict):
                     raise ValueError('JSON obyekt tələb olunur.')
                 path = urlsplit(self.path).path

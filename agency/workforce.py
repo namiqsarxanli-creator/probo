@@ -150,7 +150,9 @@ def review(workers, attempts, policy=POLICY):
                 f"{best['name']} baş mütəxəssis təyin edildi: {s['judged']} cavabda bloklanma "
                 f"{percent(s['block_rate'])}, {why}.")))
             for other in staffed:
-                if other['status'] == 'senior' and other['id'] != best['id'] and other['id'] not in leaving:
+                # A senior warned or fired in this same review has already lost the title; a "demote"
+                # here would quietly reset a warning back to active.
+                if other['status'] == 'senior' and other['id'] != best['id'] and other['id'] not in changed:
                     actions.append(dict(kind='demote', worker_id=other['id'], status='active',
                                         stats=report[other['id']],
                                         message=f"{other['name']} baş mütəxəssis vəzifəsini {dative(best['name'])} verdi."))

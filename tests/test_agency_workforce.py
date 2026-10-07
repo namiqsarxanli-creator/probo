@@ -75,6 +75,14 @@ class ReviewTest(unittest.TestCase):
         record = attempts('a', 16, 1, cost=100) + attempts('b', 20, 0, cost=50)
         self.assertEqual(self.act(wf.review(staff, record), 'promote')[0]['worker_id'], 'b')
 
+    def test_a_warned_senior_is_not_demoted_back_to_active(self):
+        staff = [worker('a', 'senior', name='Kamal'), worker('b', name='Səbinə')]
+        record = attempts('a', 16, 2, cost=50) + attempts('b', 20, 0, cost=900)
+        actions = wf.review(staff, record)
+        self.assertEqual(self.act(actions, 'warn')[0]['status'], 'warned')
+        self.assertEqual(self.act(actions, 'promote')[0]['worker_id'], 'b')
+        self.assertFalse(self.act(actions, 'demote'))  # the warning already took the title
+
     def test_fired_worker_cannot_be_promoted(self):
         record = attempts('a', 11, 9, cost=1)
         actions = wf.review([worker('a')], record)
