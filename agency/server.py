@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, urlsplit
 from app.provider import Provider
 from agency.engine import Agency
 from agency.llm import Models
+from agency.telegram import TelegramBridge, token_from
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / 'static'
@@ -26,7 +27,7 @@ FILES = {'/': ('agency.html', 'text/html'), '/agency.js': ('agency.js', 'text/ja
          '/agency.css': ('agency.css', 'text/css')}
 
 
-def make_handler(agency):
+def make_handler(agency, bridge=None):
     token = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):
@@ -59,7 +60,8 @@ def make_handler(agency):
             query = parse_qs(parts.query)
             try:
                 if parts.path == '/api/state':
-                    return self.reply(200, dict(agency.snapshot(), csrf=token))
+                    return self.reply(200, dict(agency.snapshot(), csrf=token,
+                                                telegram=bridge.status() if bridge else None))
                 if parts.path == '/api/document':
                     return self.reply(200, agency.document_body(query.get('id', [''])[0]))
                 if parts.path == '/api/audit':
@@ -114,6 +116,7 @@ def make_handler(agency):
                     '/api/mode': lambda: agency.set_mode(data.get('mode')) or {},
                     '/api/settings': lambda: agency.set_policy(data.get('policy')) or {},
                     '/api/replay/restart': lambda: agency.restart_replay(data.get('speed')) or {},
+                    '/api/approve': lambda: agency.approve_draft(data.get('job_id')) or {},
                 }
                 if path not in actions:
                     return self.reply(404, {'error': 'Tapılmadı.'})
@@ -160,8 +163,13 @@ def serve(replay=None, speed=10.0):
         print(f'TƏKRAR rejimi: {replay} · sürət {speed:g}×', flush=True)
     else:
         agency = Agency(ROOT / 'data' / 'agency.sqlite3', Models(Provider(ROOT)))
-    server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(agency))
     stop = threading.Event()
+    bridge, telegram = None, None if replay else token_from(ROOT)
+    if telegram:
+        bridge = TelegramBridge(agency, telegram)
+        bridge.start(stop)
+        print('Telegram bot: ' + (f'https://t.me/{bridge.username}' if bridge.username else f'xəta — {bridge.error}'), flush=True)
+    server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(agency, bridge))
 
     def loop():
         while not stop.is_set():

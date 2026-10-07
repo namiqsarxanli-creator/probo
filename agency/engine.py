@@ -345,6 +345,16 @@ class Agency:
             return self._enqueue('tender', 'müştəri', doc['title'], dict(document_id=doc['id']),
                                  label=dict(gold=gold) if gold else None, document=doc)
 
+    def approve_draft(self, job_id):
+        """A person signs off a draft; only then does it count as sent."""
+        self._live()
+        with self.lock, self.db:
+            job = self._one('SELECT * FROM jobs WHERE id=?', (job_id,))
+            if not job or job['status'] != 'qaralama':
+                raise ValueError('Yalnız qaralama statusundakı cavab təsdiqlənə bilər.')
+            self.db.execute("UPDATE jobs SET status='göndərildi', finished_at=? WHERE id=?", (now(), job_id))
+            self.log('soz', 'human', f"Əməkdaş qaralamanı təsdiqlədi və göndərdi: «{job['title'][:80]}».", data=dict(job_id=job_id))
+
     def human_reply(self, text):
         """A person writes the reply; the same guard decides whether it may be sent."""
         policy = self.policy_document()

@@ -129,3 +129,6 @@ background:#2a2313;border-bottom:1px solid #5a4520;color:#ffd591;font-size:13px}
 #replay-bar .replay-track i{display:block;height:100%;background:var(--warn);width:0}
 #replay-bar button{background:none;border:1px solid #5a4520;color:#ffd591;border-radius:7px;padding:4px 12px;cursor:pointer}
 body.replaying .live-only{opacity:.4;pointer-events:none}
+.ticket .approve{margin-top:9px;font-size:12px;padding:6px 12px}
+#telegram-link a{color:var(--accent)}
+#replay-bar[hidden],#toast[hidden]{display:none}

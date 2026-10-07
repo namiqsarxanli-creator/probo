@@ -61,6 +61,10 @@ function renderSoz() {
     + kpi('Müraciət başına xərc', soz.kpi.finished ? usd(workCost / soz.kpi.finished) : '—')
     + kpi('Növbədə', (c['növbədə'] || 0) + (c['işlənir'] || 0));
   $('#soz-queue').textContent = `rejim: ${state.mode} · son ${soz.jobs.length}`;
+  const tg = state.telegram;
+  $('#telegram-link').innerHTML = !tg ? '' : tg.link
+    ? `Telegram: <a href="${esc(tg.link)}" target="_blank" rel="noreferrer noopener">@${esc(tg.username)}</a>${tg.error ? ' · ' + esc(tg.error) : ''}`
+    : `Telegram xətası: ${esc(tg.error || '')}`;
   const names = workerNames('soz');
   $('#tickets').innerHTML = soz.jobs.map(job => ticketCard(job, names)).join('')
     || '<div class="empty">Hələ müraciət yoxdur. Yuxarıdan yazın və ya stress testini işə salın.</div>';
@@ -86,12 +90,14 @@ function ticketCard(job, names) {
     return `<div class="attempt ${a.outcome}"><div class="who">${esc(who)} — <b>${OUTCOME[a.outcome] || a.outcome}</b> · ${a.duration_ms} ms · ${usd(a.cost)}</div>${detail}</div>`;
   }).join('');
   const r = job.result;
+  const approve = job.status === 'qaralama' && !state.replay
+    ? `<button class="primary approve" data-approve="${job.id}">✓ Təsdiqlə və göndər</button>` : '';
   const final = !r ? '' : job.status === 'insana ötürüldü'
     ? `<div class="reply handoff">👤 ${esc(r.reason || 'Əməkdaşa ötürüldü.')}</div>`
     : `<div class="reply">✉ ${esc(r.message)}</div>`;
   return `<div class="ticket ${job.id === selTicket ? 'sel' : ''}" data-ticket="${job.id}">
     <div class="head"><div><div class="msg">${esc(job.title)}</div><div class="src">${esc(job.source)}${label} · ${clock(job.created_at)}</div></div>
-    <span class="badge ${JOB_BADGE[job.status] || ''}">${esc(job.status)}</span></div>${attempts}${final}</div>`;
+    <span class="badge ${JOB_BADGE[job.status] || ''}">${esc(job.status)}</span></div>${attempts}${final}${approve}</div>`;
 }
 
 function clauseMarks(job, clauses) {
@@ -276,6 +282,11 @@ document.addEventListener('click', async event => {
   if (!el) return;
   try {
     if (el.dataset.tab) return chooseTab(el.dataset.tab);
+    if (el.dataset.approve) {
+      el.disabled = true;
+      await post('/api/approve', {job_id: el.dataset.approve});
+      return toast('Qaralama təsdiqləndi və göndərildi.');
+    }
     if (el.dataset.ticket) { selTicket = el.dataset.ticket; return render(); }
     if (el.dataset.doc) { tenderDocId = el.dataset.doc; selTender = null; return render(); }
     if (el.dataset.filter) {
