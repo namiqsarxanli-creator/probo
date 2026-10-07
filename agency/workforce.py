@@ -41,6 +41,7 @@ POLICY = dict(
     monthly_budget_usd=5.0,
     tpm_limit=7000,         # tokens per minute per model; the key's real limit is 8,000
     audit_rate=0.2,         # share of sent replies a person re-checks
+    peer_review=1,          # a colleague on another model checks that the cited rule fits the case
 )
 STATUS_LABELS = dict(candidate='Namizəd', reserve='Ehtiyat namizəd', probation='Sınaq müddəti', active='Aktiv', warned='Xəbərdarlıq',
                      senior='Baş mütəxəssis', fired='İşdən çıxarılıb', rejected='İşə qəbul edilmədi',
@@ -65,7 +66,10 @@ def salary(model, tokens_in, tokens_out):
 
 def stats(worker_id, attempts, window=POLICY['window']):
     """Judged performance from real work, never from exams."""
-    own = [a for a in attempts if a['worker_id'] == worker_id and not a.get('exam')]
+    mine = [a for a in attempts if a['worker_id'] == worker_id and not a.get('exam')]
+    # Reviewing a colleague is work too, but it is not answering: it stays out of cost per answer.
+    own = [a for a in mine if a['outcome'] != 'peer']
+    reviewed = [a for a in mine if a['outcome'] == 'peer']
     judged = [a for a in own if a['outcome'] in ('passed', 'blocked')][-window:]
     blocked = sum(1 for a in judged if a['outcome'] == 'blocked')
     passed = len(judged) - blocked
@@ -74,7 +78,8 @@ def stats(worker_id, attempts, window=POLICY['window']):
     escalated = sum(1 for a in own if a['outcome'] == 'escalated')
     reasons = Counter(c for a in judged if a['outcome'] == 'blocked' for c in a.get('categories', []))
     return dict(judged=len(judged), blocked=blocked, passed=passed, escalated=escalated, tasks=len(own),
-                reasons=dict(reasons),
+                reasons=dict(reasons), peer_reviews=len(reviewed),
+                peer_cost=sum(a.get('cost') or 0 for a in reviewed),
                 block_rate=round(blocked / len(judged), 4) if judged else None,
                 low=round(low, 4), high=round(high, 4), cost=spent,
                 cost_per_pass=round(spent / passed) if passed else None,

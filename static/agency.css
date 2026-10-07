@@ -142,3 +142,6 @@ body.replaying .live-only{opacity:.4;pointer-events:none}
 #telegram-qr{float:right;margin:0 0 8px 12px}
 #telegram-qr img{width:96px;height:96px;display:block;border-radius:6px}
 #telegram-qr[hidden]{display:none}
+.kpis.six{grid-template-columns:repeat(6,minmax(0,1fr))}
+.entry.flag{border-color:var(--warn)}
+@media(max-width:1000px){.kpis.six{grid-template-columns:repeat(2,1fr)}}

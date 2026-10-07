@@ -351,7 +351,16 @@ class Agency:
                 reply_ok = int(guard.check_free_text(reply, self.policy_document()['body'])['ok'])
             self.db.execute('UPDATE reviews SET verdict=?, reply=?, reply_ok=?, note=?, reviewed_at=? WHERE job_id=?',
                             (verdict, reply, reply_ok, str(note or '').strip()[:400] or None, now(), job_id))
-            what = 'Audit' if row['kind'] == 'audit' else 'Kölgə müqayisəsi'
+            what = {'audit': 'Audit', 'shadow': 'Kölgə müqayisəsi', 'flag': 'Həmkar şübhəsi'}[row['kind']]
+            if row['kind'] == 'flag':
+                job = self._one('SELECT status, result FROM jobs WHERE id=?', (job_id,))
+                if job['status'] == 'qaralama' and verdict == 'ok':
+                    self.db.execute("UPDATE jobs SET status='göndərildi', finished_at=? WHERE id=?", (now(), job_id))
+                elif job['status'] == 'qaralama':
+                    result = dict(json.loads(job['result'] or '{}'), message=f'{support.GREETING} {support.HANDOFF}',
+                                  reason='Həmkar şübhəsini insan təsdiqlədi: cavab bu hala aid deyildi.')
+                    self.db.execute("UPDATE jobs SET status='insana ötürüldü', finished_at=?, result=? WHERE id=?",
+                                    (now(), json.dumps(result, ensure_ascii=False), job_id))
             worker = self._one("SELECT w.id, w.name FROM attempts a JOIN workers w ON w.id = a.worker_id "
                                "WHERE a.job_id=? AND a.outcome='passed' LIMIT 1", (job_id,))
             if verdict == 'wrong':
@@ -431,6 +440,8 @@ class Agency:
             if not job or job['status'] != 'qaralama':
                 raise ValueError('Yalnız qaralama statusundakı cavab təsdiqlənə bilər.')
             self.db.execute("UPDATE jobs SET status='göndərildi', finished_at=? WHERE id=?", (now(), job_id))
+            self.db.execute("UPDATE reviews SET verdict='ok', reviewed_at=? WHERE job_id=? AND kind='flag' AND verdict IS NULL",
+                            (now(), job_id))
             self.log('soz', 'human', f"Əməkdaş qaralamanı təsdiqlədi və göndərdi: «{job['title'][:80]}».", data=dict(job_id=job_id))
 
     def human_reply(self, text):
@@ -494,7 +505,7 @@ class Agency:
                 return max(0.0, 60 - (clock - stamp) + 0.5)
         return 60.0
 
-    def _ask(self, worker, service, payload_messages):
+    def _ask(self, worker, service, payload_messages, schema=None, name=None):
         """One paced call. Waiting here keeps the agency under the provider's
         tokens-per-minute limit instead of discovering it through 429s."""
         model = worker['model']
@@ -502,10 +513,10 @@ class Agency:
         wait = self._capacity_wait(model, estimate)
         if wait:
             self.sleep(min(wait, 65))
-        schema = support.SCHEMA if service == 'soz' else tender.SCHEMA
+        schema = schema or (support.SCHEMA if service == 'soz' else tender.SCHEMA)
         try:
             result = self.models.call(model, payload_messages, schema,
-                                      'support_reply' if service == 'soz' else 'tender_card')
+                                      name or ('support_reply' if service == 'soz' else 'tender_card'))
         except RateLimitError as exc:
             self._cool(model, exc.retry_after)
             raise
@@ -719,12 +730,44 @@ class Agency:
         if label:
             evaluation['score'] = (support.grade(evaluation, label, doc['body']) if service == 'soz'
                                    else tender.grade(evaluation, label['gold'], doc['body']))
+        peer = None
+        if (service == 'soz' and evaluation['outcome'] == 'passed' and job['source'] != 'reqressiya'
+                and self.policy()['peer_review']):
+            peer = self._peer(worker, doc, text, evaluation)
         with self.lock, self.db:
             attempt = self._record_attempt(job['id'], worker, service, False, result, evaluation, evaluation['outcome'])
-            self._settle(job, worker, doc, attempt, evaluation)
+            if peer and peer.get('result'):
+                self._record_attempt(job['id'], peer['worker'], service, False, peer['result'],
+                                     dict(applies=peer['applies'], reason=peer['reason'], author=worker['id']), 'peer')
+            self._settle(job, worker, doc, attempt, evaluation, peer)
             self._review(service)
 
-    def _settle(self, job, worker, doc, attempt, evaluation):
+    def _reviewer(self, author):
+        """A colleague on a different model if there is one: the same model tends to share the same blind spot."""
+        others = [w for w in self.staffed('soz') if w['id'] != author['id'] and self.cooldown.get(w['model'], 0) <= time.time()]
+        pool = [w for w in others if w['model'] != author['model']] or others
+        price = lambda w: wf.MODELS[w['model']]['input'] + wf.MODELS[w['model']]['output']
+        return min(pool, key=lambda w: (price(w), w['last_used'])) if pool else None
+
+    def _peer(self, author, doc, text, evaluation):
+        """Second opinion on what the guard cannot see: does the cited rule belong to this case?
+
+        It never counts against the author by itself — a flag only holds the
+        reply for a person, and the person's verdict is what HR sees.
+        """
+        with self.lock:
+            reviewer = self._reviewer(author)
+        if not reviewer:
+            return None
+        try:
+            result = self._ask(reviewer, 'soz', support.peer_messages(doc['body'], privacy.mask(text)[0], evaluation['sentences']),
+                               support.PEER_SCHEMA, 'peer_review')
+        except Exception as exc:
+            return dict(worker=reviewer, applies=None, reason=f'Həmkar rəyi alınmadı: {exc}'[:200])
+        applies, reason = support.peer_verdict(result.get('content') or '')
+        return dict(worker=reviewer, result=result, applies=applies, reason=reason)
+
+    def _settle(self, job, worker, doc, attempt, evaluation, peer=None):
         service, outcome = job['service'], evaluation['outcome']
         tries = self._all("SELECT * FROM attempts WHERE job_id=? AND outcome!='error' ORDER BY started_at, rowid", (job['id'],))
         if outcome == 'blocked':
@@ -735,6 +778,12 @@ class Agency:
                 status, final = 'yoxlanıldı', dict(message=evaluation['message'], worker=worker['name'])
             elif outcome == 'passed':
                 status, final = MODES.get(self.mode(), 'göndərildi'), dict(message=evaluation['message'], worker=worker['name'])
+                if peer and peer['applies'] is False and status in ('göndərildi', 'qaralama'):
+                    # Held, not sent: a person decides whether the colleague was right.
+                    status, final['flag'] = 'qaralama', dict(by=peer['worker']['name'], reason=peer['reason'])
+                    self.log(service, 'flag', f"Həmkar rəyi ({peer['worker']['name']}): {worker['name']}-in cavabı bu hala "
+                             f"aid olmaya bilər — {peer['reason']}"[:380] + ' Cavab göndərilmədi, insan yoxlayacaq.',
+                             worker['id'], dict(job_id=job['id']))
             elif outcome == 'escalated':
                 status, final = 'insana ötürüldü', dict(message=evaluation['message'], reason=evaluation.get('reason'))
             elif len(tries) >= MAX_ATTEMPTS['soz'] or not self._pick('soz', {t['worker_id'] for t in tries}):
@@ -758,9 +807,13 @@ class Agency:
             self.log(service, 'escalate', f"Müraciət insana ötürüldü: {final.get('reason') or ''}"[:300], data=dict(job_id=job['id']))
         # What the guard cannot see is measured by people: a random share of sent
         # replies is audited, and every shadow draft is compared with the human reply.
-        if status == 'kölgə' or (status == 'göndərildi' and self.rng.random() < self.policy()['audit_rate']):
+        # A reply with no second opinion (reviewer unavailable or unreadable) is always audited.
+        unreviewed = service == 'soz' and peer is not None and peer['applies'] is None
+        kind = ('flag' if final.get('flag') else 'shadow' if status == 'kölgə' else
+                'audit' if status == 'göndərildi' and (unreviewed or self.rng.random() < self.policy()['audit_rate']) else None)
+        if kind:
             self.db.execute('INSERT OR IGNORE INTO reviews(job_id, kind, created_at) VALUES (?, ?, ?)',
-                            (job['id'], 'shadow' if status == 'kölgə' else 'audit', now()))
+                            (job['id'], kind, now()))
 
     def _review(self, service):
         for action in wf.review(self.staffed(service), self.attempts(service, exam=False), self.policy()):
@@ -860,7 +913,7 @@ class Agency:
                 row.update(verdict=None, reply=None, reply_ok=None, note=None, reviewed_at=None)
             rows.append(row)
         summary = {}
-        for kind in ('audit', 'shadow'):
+        for kind in ('audit', 'shadow', 'flag'):
             mine = [r for r in rows if r['kind'] == kind]
             done = [r for r in mine if r['verdict']]
             wrong = sum(1 for r in done if r['verdict'] == 'wrong')
@@ -871,11 +924,14 @@ class Agency:
                                  wrong_low=round(low, 4), wrong_high=round(high, 4),
                                  human_replies=len(replies), human_ok=sum(r['reply_ok'] for r in replies))
         queue = []
-        for row in [r for r in rows if not r['verdict']][:15]:
+        # A held reply has a customer waiting for it, so it goes first.
+        for row in sorted((r for r in rows if not r['verdict']), key=lambda r: r['kind'] != 'flag')[:15]:
             attempt = self._one("SELECT a.evaluation, w.name, w.model FROM attempts a JOIN workers w ON w.id = a.worker_id "
                                 "WHERE a.job_id=? AND a.outcome='passed' ORDER BY a.started_at DESC LIMIT 1", (row['job_id'],))
             evaluation = json.loads(attempt['evaluation']) if attempt else {}
-            queue.append(dict(job_id=row['job_id'], kind=row['kind'], title=row['title'], source=row['source'],
+            peer = self._one("SELECT a.evaluation, w.name FROM attempts a JOIN workers w ON w.id = a.worker_id "
+                             "WHERE a.job_id=? AND a.outcome='peer' ORDER BY a.started_at DESC LIMIT 1", (row['job_id'],))
+            queue.append(dict(peer=dict(json.loads(peer['evaluation']), name=peer['name']) if peer else None,job_id=row['job_id'], kind=row['kind'], title=row['title'], source=row['source'],
                               created_at=row['created_at'], message=json.loads(row['result'] or '{}').get('message'),
                               worker=attempt['name'] if attempt else None,
                               situation=evaluation.get('situation'),
@@ -928,7 +984,7 @@ class Agency:
         self._live()
         allowed = dict(warn_rate=(0.01, 0.9), fire_rate=(0.01, 0.9), exam_pass=(0.1, 1.0),
                        monthly_budget_usd=(0.01, 1000), probation=(3, 100), tpm_limit=(1000, 1_000_000),
-                       audit_rate=(0.0, 1.0))
+                       audit_rate=(0.0, 1.0), peer_review=(0, 1))
         current = self.setting('policy', {})
         for key, value in (changes or {}).items():
             if key not in allowed:
@@ -937,7 +993,7 @@ class Agency:
             number = float(value)
             if not low <= number <= high:
                 raise ValueError(f'{key} {low}–{high} arasında olmalıdır.')
-            current[key] = int(number) if key in ('probation', 'tpm_limit') else number
+            current[key] = int(number) if key in ('probation', 'tpm_limit', 'peer_review') else number
         with self.lock, self.db:
             self.db.execute('INSERT OR REPLACE INTO settings VALUES (?, ?)', ('policy', json.dumps(current)))
             self.log('soz', 'policy', 'Şirkət siyasəti yeniləndi: ' + ', '.join(f'{k}={v}' for k, v in current.items()))

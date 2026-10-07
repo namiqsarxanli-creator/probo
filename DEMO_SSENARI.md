@@ -70,6 +70,12 @@ Cavab gəlir. İstinad etdiyi bənd sağdakı **Qaydalar** panelində yaşıl ya
 
 **Komanda və HR**-da Kamalın kartını göstərin: bloklanma səbəbləri arasında «insan yoxlamasında yanlış tapıldı».
 
+**Canlı tabda təkrarlayın.** **Müştəri kimi yaz** sahəsinə yazın: *"Gəncəyə göndərirsiniz? Neçəyə başa gəlir?"*
+- Kamal çox vaxt yenə xaricə çatdırılma qaydası ilə cavab verir. 07.10-da sınaqlarda 3 dəfədən 2-də belə oldu. Bu dəfə cavab **göndərilmir**: həmkar (başqa model) şübhələnir, kartda «⏸ Göndərilmədi» yazısı çıxır, cavab İnsan yoxlaması növbəsinin başına düşür.
+- Cavab düzgün gəlsə, o da yaxşı nəticədir — sadəcə göndərilir.
+
+> "Bu səhvi əvvəlcə insan tutmuşdu. İndi isə müştəriyə getməzdən əvvəl başqa model tutur. Amma işçini yenə insan cəzalandırır, model yox."
+
 Sonra **Reqressiya** kartı:
 
 > "Mağaza çatdırılma qiymətini 5-dən 7 manata qaldırdı. Sistem əvvəl göndərdiyi 36 cavabı yenidən yoxladı və birini tapdı: '50 manatdan yuxarı pulsuzdur' — bu söz artıq qüvvədə deyil. Gəncə sualı da yenidən soruşuldu, indi düzgün cavab gəldi."

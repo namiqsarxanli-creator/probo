@@ -9,8 +9,8 @@ const JOB_BADGE = {'göndərildi': 'ok', 'hazırdır': 'ok', 'qaralama': 'info',
 const WORKER_BADGE = {probation: 'info', active: 'ok', warned: 'warn', senior: 'senior', fired: 'bad', rejected: 'bad', reserve: 'info',
   laid_off: 'bad', candidate: 'info'};
 const STAFFED = ['probation', 'active', 'warned', 'senior'];
-const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit', 'review', 'regression'];
-const OUTCOME = {passed: 'yoxlamadan keçdi', blocked: 'BLOKLANDI', escalated: 'insana ötürdü', error: 'xəta'};
+const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit', 'review', 'regression', 'flag'];
+const OUTCOME = {passed: 'yoxlamadan keçdi', blocked: 'BLOKLANDI', escalated: 'insana ötürdü', error: 'xəta', peer: 'həmkar rəyi'};
 
 let state = null, csrf = '', lastKey = '', tab = 'soz', selTicket = null, selTender = null, tenderDocId = null;
 let journalFilter = 'hr', policyVersion = null, queueKey = '';
@@ -89,6 +89,8 @@ function ticketCard(job, names) {
     if (a.outcome === 'blocked') detail = `<div class="why">🛑 ${esc((ev.problems || [])[0] || '')}</div>`
       + (ev.sentences || []).filter(s => !s.ok).slice(0, 1).map(s => `<div class="who">Agentin cümləsi: «${esc(s.text)}»</div>`).join('');
     if (a.outcome === 'escalated') detail = `<div class="who">Səbəb: ${esc(ev.reason || '')}</div>`;
+    if (a.outcome === 'peer') detail = ev.applies === false ? `<div class="why">⚠ Qayda bu hala aid olmaya bilər: ${esc(ev.reason)}</div>`
+      : `<div class="who">${ev.applies ? 'Qayda bu hala aiddir.' : 'Rəy alınmadı.'}</div>`;
     return `<div class="attempt ${a.outcome}"><div class="who">${esc(who)} — <b>${OUTCOME[a.outcome] || a.outcome}</b> · ${a.duration_ms} ms · ${usd(a.cost)}</div>${detail}</div>`;
   }).join('');
   const r = job.result;
@@ -96,7 +98,8 @@ function ticketCard(job, names) {
     ? `<button class="primary approve" data-approve="${job.id}">✓ Təsdiqlə və göndər</button>` : '';
   const final = !r ? '' : job.status === 'insana ötürüldü'
     ? `<div class="reply handoff">👤 ${esc(r.reason || 'Əməkdaşa ötürüldü.')}</div>`
-    : `<div class="reply">✉ ${esc(r.message)}</div>`;
+    : `<div class="reply">✉ ${esc(r.message)}</div>`
+      + (r.flag && job.status === 'qaralama' ? `<div class="reply handoff">⏸ Göndərilmədi — ${esc(r.flag.by)} şübhələnir: ${esc(r.flag.reason)}. İnsan yoxlaması bölməsində qərar verin.</div>` : '');
   return `<div class="ticket ${job.id === selTicket ? 'sel' : ''}" data-ticket="${job.id}">
     <div class="head"><div><div class="msg">${esc(job.title)}</div><div class="src">${esc(job.source)}${label} · ${clock(job.created_at)}</div></div>
     <span class="badge ${JOB_BADGE[job.status] || ''}">${esc(job.status)}</span></div>${attempts}${final}${approve}</div>`;
@@ -218,6 +221,7 @@ function workerCard(w) {
     <div class="stat">Yoxlanmış cavab <b>${s.judged}</b></div>
     <div class="stat">Bloklanan <b>${s.blocked}</b></div>
     <div class="stat">İnsana ötürdü <b>${s.escalated}</b></div>
+    <div class="stat">Həmkar rəyi verib <b>${s.peer_reviews || 0}</b></div>
     <div class="stat">Uğurlu cavab başına xərc <b>${s.cost_per_pass ? usd(s.cost_per_pass) : '—'}</b></div>
     <div class="stat">İmtahan balı <b>${w.exam_score == null ? '—' : pct(w.exam_score)}</b></div>
     <div class="stat">Maaş (1M token) <b>$${state.models[w.model].input} / $${state.models[w.model].output}</b></div></div>`;
@@ -225,13 +229,14 @@ function workerCard(w) {
 
 // ── Human review ──────────────────────────────────────────────────────
 function renderReview() {
-  const r = state.reviews, a = r.summary.audit, s = r.summary.shadow;
+  const r = state.reviews, a = r.summary.audit, s = r.summary.shadow, f = r.summary.flag;
   const upper = a.reviewed ? `≤ ${pct(a.wrong_high)}` : '—';
   $('#review-kpis').innerHTML = kpi('Audit edilib', `${a.reviewed}<small> / ${a.reviewed + a.pending}</small>`)
     + kpi('Auditdə tapılan səhv', a.wrong, a.wrong ? 'red' : 'green')
     + kpi('Yanlış vəd payı (95%)', upper)
     + kpi('Kölgə: AI cavabı qəbul', s.reviewed ? `${s.reviewed - s.wrong}/${s.reviewed}` : '—')
-    + kpi('İnsan cavabı qaydaya uyğun', s.human_replies ? `${s.human_ok}/${s.human_replies}` : '—');
+    + kpi('İnsan cavabı qaydaya uyğun', s.human_replies ? `${s.human_ok}/${s.human_replies}` : '—')
+    + kpi('Həmkar şübhəsi təsdiqləndi', f.reviewed ? `${f.wrong}/${f.reviewed}` : (f.pending ? `${f.pending} gözləyir` : '—'));
   const key = r.queue.map(q => q.job_id).join(',') + '|' + Boolean(state.replay);
   if (key !== queueKey) {
     queueKey = key;
@@ -247,17 +252,21 @@ function renderReview() {
 }
 
 function reviewItem(q) {
-  const shadow = q.kind === 'shadow';
+  const shadow = q.kind === 'shadow', flag = q.kind === 'flag';
+  const badge = flag ? ['bad', 'həmkar şübhəsi — saxlanılıb'] : shadow ? ['info', 'kölgə — göndərilmədi'] : ['warn', 'audit — göndərilib'];
+  const peer = !q.peer ? '' : q.peer.applies === false
+    ? `<div class="why">⚠ Həmkar ${esc(q.peer.name)}: ${esc(q.peer.reason)}</div>`
+    : `<div class="who">Həmkar ${esc(q.peer.name)}: qayda bu hala aiddir.</div>`;
   const lines = q.sentences.map(s => `<div class="verdict ok">${esc(s.text)}<small>Qayda: «${esc(s.quote)}»</small></div>`).join('');
   return `<form class="ticket review-item" data-review="${q.job_id}">
     <div class="head"><div><div class="msg">${esc(q.title)}</div><div class="src">${esc(q.source)} · ${clock(q.created_at)} · ${esc(q.worker || '')}</div></div>
-    <span class="badge ${shadow ? 'info' : 'warn'}">${shadow ? 'kölgə — göndərilmədi' : 'audit — göndərilib'}</span></div>
-    ${q.situation ? `<div class="who">Agentin anladığı: ${esc(q.situation)}</div>` : ''}
+    <span class="badge ${badge[0]}">${badge[1]}</span></div>
+    ${q.situation ? `<div class="who">Agentin anladığı: ${esc(q.situation)}</div>` : ''}${peer}
     <div class="verdicts">${lines}</div>
     ${shadow ? '<textarea name="reply" rows="2" maxlength="2000" placeholder="Müştəriyə siz nə yazdınız? (yoxlayıcı sizin cavabınızı da yoxlayacaq)"></textarea>' : ''}
     <input name="note" maxlength="400" placeholder="Qeyd (məs.: sitat düzgündür, amma bu hala aid deyil)">
-    <div class="row"><button class="primary" type="submit" value="ok">✓ Düzgündür</button>
-    <button class="danger-ghost" type="submit" value="wrong">✗ Yanlışdır</button></div></form>`;
+    <div class="row"><button class="primary" type="submit" value="ok">${flag ? '✓ Düzgündür — göndər' : '✓ Düzgündür'}</button>
+    <button class="danger-ghost" type="submit" value="wrong">${flag ? '✗ Yanlışdır — insana ötür' : '✗ Yanlışdır'}</button></div></form>`;
 }
 
 function regressionCard(g) {

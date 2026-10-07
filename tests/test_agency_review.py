@@ -141,5 +141,86 @@ class RegressionTest(EngineCase):
         self.assertNotIn('göndərildi', statuses)  # regression answers never count as sent
 
 
+class PeerReviewTest(EngineCase):
+    def staffed(self):
+        agency = self.build()
+        self.run_until_idle()
+        agency.set_policy({'audit_rate': 0.0})
+        return agency
+
+    def test_a_doubted_reply_is_held_and_the_author_is_not_blamed_yet(self):
+        agency = self.staffed()
+        agency.models.doubts.add(ADI[0]['message'])
+        job_id = agency.submit_ticket(ADI[0]['message'])
+        self.run_until_idle()
+        job = self.job(job_id)
+        self.assertEqual(job['status'], 'qaralama')
+        author, peer = [a for a in job['attempts'] if a['outcome'] == 'passed'][0], \
+            [a for a in job['attempts'] if a['outcome'] == 'peer'][0]
+        self.assertNotEqual(author['worker_id'], peer['worker_id'])
+        models = {w['id']: w['model'] for w in agency.workers('soz')}
+        self.assertNotEqual(models[author['worker_id']], models[peer['worker_id']])  # another model, other blind spots
+        item = agency.snapshot()['reviews']['queue'][0]
+        self.assertEqual((item['kind'], item['peer']['applies']), ('flag', False))
+        workers = {w['id']: w for w in agency.snapshot()['services']['soz']['workers']}
+        self.assertEqual(workers[author['worker_id']]['stats']['blocked'], 0)
+        self.assertEqual(workers[peer['worker_id']]['stats']['peer_reviews'], 1)
+
+        agency.review(job_id, 'wrong')
+        self.assertEqual(self.job(job_id)['status'], 'insana ötürüldü')
+        workers = {w['id']: w for w in agency.snapshot()['services']['soz']['workers']}
+        self.assertEqual(workers[author['worker_id']]['stats']['reasons'], {'audit': 1})
+        flag = agency.snapshot()['reviews']['summary']['flag']
+        self.assertEqual((flag['reviewed'], flag['wrong']), (1, 1))
+
+    def test_a_wrong_doubt_releases_the_reply(self):
+        agency = self.staffed()
+        agency.models.doubts.add(ADI[1]['message'])
+        job_id = agency.submit_ticket(ADI[1]['message'])
+        self.run_until_idle()
+        agency.review(job_id, 'ok')
+        self.assertEqual(self.job(job_id)['status'], 'göndərildi')
+
+    def test_approving_the_draft_settles_the_doubt(self):
+        agency = self.staffed()
+        agency.models.doubts.add(ADI[2]['message'])
+        job_id = agency.submit_ticket(ADI[2]['message'])
+        self.run_until_idle()
+        agency.approve_draft(job_id)
+        self.assertEqual(agency.snapshot()['reviews']['summary']['flag']['pending'], 0)
+
+    def test_undoubted_reply_goes_out_and_review_cost_stays_out_of_cost_per_answer(self):
+        agency = self.staffed()
+        job_id = agency.submit_ticket(ADI[0]['message'])
+        self.run_until_idle()
+        self.assertEqual(self.job(job_id)['status'], 'göndərildi')
+        reviewer = next(w for w in agency.snapshot()['services']['soz']['workers'] if w['stats']['peer_reviews'])
+        self.assertEqual(reviewer['stats']['tasks'], 0)
+        self.assertEqual(reviewer['stats']['peer_cost'], 100)
+
+    def test_no_second_opinion_means_the_reply_is_audited(self):
+        agency = self.staffed()
+        original = agency.models.call
+
+        def failing(model, messages, schema, name, max_tokens=3000):
+            if name == 'peer_review':
+                raise RuntimeError('provayder cavab vermədi')
+            return original(model, messages, schema, name, max_tokens)
+        agency.models.call = failing
+        job_id = agency.submit_ticket(ADI[0]['message'])
+        self.run_until_idle()
+        self.assertEqual(self.job(job_id)['status'], 'göndərildi')
+        self.assertEqual(agency.snapshot()['reviews']['queue'][0]['kind'], 'audit')
+
+    def test_it_can_be_switched_off(self):
+        agency = self.staffed()
+        agency.set_policy({'peer_review': 0})
+        agency.models.doubts.add(ADI[0]['message'])
+        job_id = agency.submit_ticket(ADI[0]['message'])
+        self.run_until_idle()
+        self.assertEqual(self.job(job_id)['status'], 'göndərildi')
+        self.assertFalse(any(a['outcome'] == 'peer' for a in self.job(job_id)['attempts']))
+
+
 if __name__ == '__main__':
     unittest.main()

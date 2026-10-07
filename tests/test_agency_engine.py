@@ -20,6 +20,7 @@ class FakeModels:
     def __init__(self, behaviour=None, default='honest', tokens=10):
         self.behaviour, self.default, self.calls, self.tokens = behaviour or {}, default, [], tokens
         self.current = None
+        self.doubts = set()  # customer messages a colleague will say the cited rule does not fit
 
     def ready(self):
         return True
@@ -36,7 +37,11 @@ class FakeModels:
         if style == 'ratelimit':
             raise RateLimitError(7)
         payload = json.loads(messages[1]['content'])
-        content = (self.support(payload, style) if name == 'support_reply' else self.tender(payload, style))
+        if name == 'peer_review':
+            fits = payload['müştəri_mesajı'] not in self.doubts
+            content = dict(applies=fits, reason='' if fits else 'Qayda başqa vəziyyətə aiddir.')
+        else:
+            content = (self.support(payload, style) if name == 'support_reply' else self.tender(payload, style))
         return dict(content=json.dumps(content, ensure_ascii=False), cost=100, usage=dict(total_tokens=self.tokens),
                     duration_ms=5, schema_enforced=True)
 
