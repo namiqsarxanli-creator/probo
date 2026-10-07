@@ -57,6 +57,19 @@ class MultiFactTest(unittest.TestCase):
         self.assertAlmostEqual(tender.grade(mixed, gold, DOC), round(others, 4))
 
 
+class DeadlineTest(unittest.TestCase):
+    def test_the_nearest_of_several_deadlines_drives_the_flag(self):
+        from datetime import date
+        card = [dict(key=key, label=label, critical=critical, status='missing', values=[])
+                for key, label, critical in tender.FIELDS]
+        card[tender.KEYS.index('son_tarix')].update(status='verified', values=[
+            dict(value='Tender təklifi: 16.05.2022 18:00'), dict(value='Digər sənədlər: 05.05.2022 15:00')])
+        text = tender.flags(card, today=date(2022, 5, 1))[0]['text']
+        self.assertIn('2 ayrı son tarix', text)
+        self.assertIn('4 gün qalıb', text)
+        self.assertIn('Digər sənədlər', text)
+
+
 if __name__ == '__main__':
     unittest.main()
 

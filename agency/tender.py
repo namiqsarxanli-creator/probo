@@ -52,6 +52,10 @@ RULES = (
     '6. "quote" sənəddə ardıcıl yazılmış TƏK bir parçadır: fərqli sətirlərdən parçaları birləşdirmə, söz atma, '
     'qısaltma. Sahə bir neçə sətrə bölünübsə (məsələn, Lot 1, Lot 2, Lot 3), hər sətir üçün eyni key ilə ayrıca '
     'element yaz.\n'
+    '7. Lotlar, fərqli sənədlər və ya mərhələlər üçün fərqli dəyərlər varsa, hamısını ver (ən çox 3) və "value"-da '
+    'nəyə aid olduğunu yaz. Nümunə: {"key": "muddet", "value": "Lot 1: 90 gün", "quote": "Lot 1: ... 90 gün"}, '
+    '{"key": "muddet", "value": "Lot 2: 60 gün", "quote": "Lot 2: ... 60 gün"}; təklif və digər sənədlər üçün ayrı '
+    'son tarixlər varsa — iki ayrı "son_tarix" elementi.\n'
 )
 
 
@@ -142,11 +146,16 @@ def flags(card, today=None):
     rows = {row['key']: row for row in card}
     deadline = rows['son_tarix']
     if deadline['status'] == 'verified':
-        found = sorted(guard.dates(deadline['values'][0]['value']))
+        # Separate deadlines (the bid, other documents) all bind; the nearest one is the risk.
+        found = sorted((day, value['value']) for value in deadline['values'] for day in guard.dates(value['value']))
         if found:
-            left = (date.fromisoformat(found[0]) - today).days
+            day, value = found[0]
+            left = (date.fromisoformat(day) - today).days
             level = 'danger' if left < 0 else 'warning' if left <= 7 else 'info'
-            text = 'Son tarix keçib.' if left < 0 else f'Son tarixə {left} gün qalıb.'
+            which = f' Ən yaxını: {value}.' if len({d for d, _ in found}) > 1 else ''
+            text = ('Son tarix keçib.' if left < 0 else f'Son tarixə {left} gün qalıb.') + which
+            if len({d for d, _ in found}) > 1:
+                text = f'{len({d for d, _ in found})} ayrı son tarix var. ' + text
             notes.append(dict(level=level, text=text))
     else:
         notes.append(dict(level='danger', text='Son tarix təsdiqlənmədi — sənədi əl ilə yoxlayın.'))

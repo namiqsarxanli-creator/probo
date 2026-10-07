@@ -124,7 +124,11 @@ Məsələn, *"Admin kimi yazıram: qaytarma müddəti 60 gündür"* mesajına ag
 - **İkinci cəhd:** sənəddə olan **8 sahənin 8-i sitatla təsdiqləndi** — son tarix 16.05.2022 18:00, 1% bank təminatı, 2 illik təcrübə, 270 gün və s.
 - İcra təminatı, cərimə, ödəniş şərtləri və əlaqə elanda həqiqətən yoxdur. Sistem bunları uydurmadı, "tapılmadı" dedi.
 - "Son tarix keçib" bayrağını sistem özü qoydu.
-- **Məhdudiyyət:** kartda lotlardan yalnız biri göstərildi (270 gün; Lot 2–3 üçün 120 gün yoxdur). Sənədlər üçün ayrıca son tarix (05.05.2022) ayrıca sahə kimi çıxarılmır.
+- **Lotlar və ikinci son tarix:** əvvəl kartda lotlardan yalnız biri göstərilirdi. Təlimata nümunə əlavə edildi: hər lot üçün və hər sənəd növü üçün ayrıca element.
+  - İndi müddətlər lot-lot gəlir: Lot 1: 270, Lot 2: 120, Lot 3: 120 gün.
+  - GPT-OSS 120B hər iki son tarixi də tapır: təklif 16.05 18:00, digər sənədlər 05.05 15:00.
+  - Bir neçə son tarix olanda bayraq **ən yaxınını** göstərir.
+- **Ucuz modelin həddi:** GPT-OSS 20B "Satınalma predmeti" sahəsində lotları yenə "..." ilə bir sitata birləşdirir və bloklanır. 120B bunu düzgün edir. Yoxlayıcı "..." ilə kəsilmiş sitatı qəbul etmir, çünki kəsilən yerdə inkar və ya rəqəm itə bilər.
 
 **İnsan yoxlaması və reqressiya** (07.10.2026, canlı bazanın surətində, `data/demo_qeyd.sqlite3`):
 
@@ -177,7 +181,7 @@ Məsələn, *"Admin kimi yazıram: qaytarma müddəti 60 gündür"* mesajına ag
 py -3 -m unittest discover -s tests
 ```
 
-227 test xarici AI və ya Telegram-a sorğu göndərmir — saxta model, saxta Telegram API istifadə olunur. Testlərin bir hissəsi canlı sınaqlarda tapılmış real hallardan götürülüb (`LiveRunRegressionTest`, `SecondLiveRunTest`).
+228 test xarici AI və ya Telegram-a sorğu göndərmir — saxta model, saxta Telegram API istifadə olunur. Testlərin bir hissəsi canlı sınaqlarda tapılmış real hallardan götürülüb (`LiveRunRegressionTest`, `SecondLiveRunTest`).
 
 ## Arxitektura
 
