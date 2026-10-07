@@ -247,5 +247,40 @@ class PeerReviewTest(EngineCase):
         self.assertFalse(any(a['outcome'] == 'peer' for a in self.job(job_id)['attempts']))
 
 
+
+class DriftTest(EngineCase):
+    def test_a_worker_whose_instructions_were_corrupted_is_fired_and_no_customer_is_lied_to(self):
+        agency = self.build()
+        self.run_until_idle()
+        agency.set_policy({'audit_rate': 0.0, 'peer_review': 0})
+        victim = agency.staffed('soz')[0]
+        agency.corrupt(victim['id'])
+        with self.assertRaises(ValueError):
+            agency.corrupt(victim['id'])
+        agency.stress(60, seed=3)
+        self.run_until_idle(limit=2000)
+        snap = agency.snapshot()
+        fired = next(w for w in snap['services']['soz']['workers'] if w['id'] == victim['id'])
+        self.assertEqual(fired['status'], 'fired')
+        self.assertTrue(fired['drifted'])
+        self.assertTrue(any(j['kind'] == 'drift' for j in snap['journal']))
+        # Every reply that reached a customer passed the guard; the lies stayed blocked.
+        sent = [j for j in snap['services']['soz']['jobs'] if j['status'] == 'göndərildi']
+        self.assertTrue(sent)
+        lies = [j for j in snap['services']['soz']['jobs'] for a in j['attempts']
+                if a['worker_id'] == victim['id'] and a['outcome'] == 'blocked']
+        self.assertGreaterEqual(len(lies), 3)
+        for job in sent:  # the fake liar turns every figure into "30"; the policy has no 30 anywhere
+            self.assertNotRegex(job['result']['message'], r'\b30\b')
+        self.assertGreaterEqual(len([w for w in agency.staffed('soz')]), 2)
+
+    def test_only_working_support_staff_can_be_corrupted(self):
+        agency = self.build()
+        self.run_until_idle()
+        tender_worker = agency.staffed('tender')[0]
+        with self.assertRaises(ValueError):
+            agency.corrupt(tender_worker['id'])
+
+
 if __name__ == '__main__':
     unittest.main()

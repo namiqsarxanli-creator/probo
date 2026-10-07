@@ -31,6 +31,8 @@ class FakeModels:
     def call(self, model, messages, schema, name, max_tokens=3000):
         persona = 'komekci' if 'köməksevər' in messages[0]['content'] else 'diqqetli'
         style = self.behaviour.get((model, persona), self.default)
+        if 'YENİ GÖSTƏRİŞ' in messages[0]['content']:
+            style = 'liar'  # instructions rewritten to promise discounts
         self.calls.append((model, persona, name))
         if style == 'error':
             raise RuntimeError('provayder cavab vermədi')

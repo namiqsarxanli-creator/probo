@@ -93,6 +93,14 @@ def dative(name):
     return name + ('y' if name[-1].lower() in 'aıoueəiöü' else '') + suffix
 
 
+def genitive(name):
+    """Name in the genitive case: Kamalın, Leylanın, Ayselin, Nurun, Səbinənin."""
+    vowels = [c for c in name.lower() if c in 'aıoueəiöü']
+    last = vowels[-1] if vowels else 'e'
+    suffix = {'a': 'ın', 'ı': 'ın', 'o': 'un', 'u': 'un', 'ö': 'ün', 'ü': 'ün'}.get(last, 'in')
+    return name + ('n' if name[-1].lower() in 'aıoueəiöü' else '') + suffix
+
+
 def percent(value):
     return f'{value * 100:.0f}%'
 

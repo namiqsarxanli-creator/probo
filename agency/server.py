@@ -120,6 +120,7 @@ def make_handler(agency, bridge=None):
                     '/api/settings': lambda: agency.set_policy(data.get('policy')) or {},
                     '/api/replay/restart': lambda: agency.restart_replay(data.get('speed')) or {},
                     '/api/approve': lambda: agency.approve_draft(data.get('job_id')) or {},
+                    '/api/corrupt': lambda: agency.corrupt(data.get('worker_id')) or {},
                     '/api/review': lambda: agency.review(data.get('job_id'), data.get('verdict'), data.get('reply'),
                                                          data.get('note')) or {},
                 }

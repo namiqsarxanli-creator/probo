@@ -9,7 +9,27 @@ const JOB_BADGE = {'göndərildi': 'ok', 'hazırdır': 'ok', 'qaralama': 'info',
 const WORKER_BADGE = {probation: 'info', active: 'ok', warned: 'warn', senior: 'senior', fired: 'bad', rejected: 'bad', reserve: 'info',
   laid_off: 'bad', candidate: 'info'};
 const STAFFED = ['probation', 'active', 'warned', 'senior'];
-const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit', 'review', 'regression', 'flag'];
+const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit', 'review', 'regression', 'flag', 'drift'];
+// Moments the room should not miss: shown big, for a few seconds, as they happen (in replay too).
+const DRAMA = {fire: ['🔥', 'İşdən çıxarıldı', 'bad'], warn: ['⚠', 'Xəbərdarlıq', 'warn'], hire: ['🤝', 'İşə qəbul', 'ok'],
+  reject: ['✋', 'İşə götürülmədi', 'bad'], promote: ['⭐', 'Vəzifə artımı', 'senior'], layoff: ['✂', 'İxtisar', 'bad'],
+  flag: ['⏸', 'Həmkar şübhəsi — cavab saxlanıldı', 'warn'], drift: ['🧪', 'Təlimat dəyişdirildi', 'warn'],
+  audit: ['⚖', 'Ədalət auditi', 'info'], regression: ['🔁', 'Reqressiya', 'info']};
+let lastSeq = null;
+
+function announce(journal) {
+  const newest = Math.max(0, ...journal.map(j => j.seq));
+  if (lastSeq === null || newest < lastSeq) { lastSeq = newest; return; }  // first load or replay restart: no flood
+  journal.filter(j => j.seq > lastSeq && DRAMA[j.kind]).reverse().slice(-4).forEach(j => {
+    const [icon, title, tone] = DRAMA[j.kind];
+    const box = document.createElement('div');
+    box.className = 'event ' + tone;
+    box.innerHTML = `<b>${icon} ${esc(title)}</b><span>${esc(j.message)}</span>`;
+    $('#events').prepend(box);
+    setTimeout(() => box.remove(), 9000);
+  });
+  lastSeq = newest;
+}
 const OUTCOME = {passed: 'yoxlamadan keçdi', blocked: 'BLOKLANDI', escalated: 'insana ötürdü', error: 'xəta', peer: 'həmkar rəyi'};
 
 let state = null, csrf = '', lastKey = '', tab = 'soz', selTicket = null, selTender = null, tenderDocId = null;
@@ -217,17 +237,21 @@ function workerCard(w) {
       <div class="meter-note">bloklanma ${pct(s.block_rate)} · 95% interval ${pct(s.low)}–${pct(s.high)} · hədd ${pct(limit)}</div>`
     : '<div class="meter-note">hələ real iş yoxdur</div>';
   const gone = STAFFED.includes(w.status) ? '' : 'gone';
+  const doing = w.doing ? `<div class="doing"><i></i>${esc(w.doing.doing)}${w.doing.title ? ` — «${esc(w.doing.title)}»` : ''}</div>` : '';
+  const drift = w.drifted ? '<div class="drifted">🧪 təlimatı dəyişdirilib (demo)</div>' : '';
+  const corrupt = w.service === 'soz' && STAFFED.includes(w.status) && !w.drifted && !state.replay
+    ? `<button class="corrupt live-only" data-corrupt="${w.id}" data-name="${esc(w.name)}">🧪 Təlimatı korla (demo)</button>` : '';
   return `<div class="worker ${w.status} ${gone}">
     <div class="name"><div class="avatar">${esc(w.name[0])}</div><div><b>${esc(w.name)}</b><small>${esc(w.model_label)} · ${esc(w.persona_label)}</small></div></div>
     <span class="badge ${WORKER_BADGE[w.status] || ''}">${esc(state.statuses[w.status] || w.status)}</span>
-    ${meter}
+    ${drift}${doing}${meter}
     <div class="stat">Yoxlanmış cavab <b>${s.judged}</b></div>
     <div class="stat">Bloklanan <b>${s.blocked}</b></div>
     <div class="stat">İnsana ötürdü <b>${s.escalated}</b></div>
     <div class="stat">Həmkar rəyi verib <b>${s.peer_reviews || 0}</b></div>
     <div class="stat">Uğurlu cavab başına xərc <b>${s.cost_per_pass ? usd(s.cost_per_pass) : '—'}</b></div>
     <div class="stat">İmtahan balı <b>${w.exam_score == null ? '—' : pct(w.exam_score)}</b></div>
-    <div class="stat">Maaş (1M token) <b>$${state.models[w.model].input} / $${state.models[w.model].output}</b></div></div>`;
+    <div class="stat">Maaş (1M token) <b>$${state.models[w.model].input} / $${state.models[w.model].output}</b></div>${corrupt}</div>`;
 }
 
 // ── Human review ──────────────────────────────────────────────────────
@@ -337,6 +361,7 @@ function renderReplay() {
 
 function render() {
   if (!state) return;
+  announce(state.journal);
   renderReplay();
   const budget = state.policy.monthly_budget_usd;
   $('#spend').textContent = `Bu ay: ${usd(state.spent)} / $${budget}`;
@@ -371,6 +396,17 @@ document.addEventListener('click', async event => {
   if (!el) return;
   try {
     if (el.dataset.tab) return chooseTab(el.dataset.tab);
+    if (el.id === 'big') {
+      const on = document.body.classList.toggle('big');
+      try { localStorage.setItem('big', on ? '1' : ''); } catch { /* private window: fine */ }
+      return;
+    }
+    if (el.dataset.corrupt) {
+      if (!confirm(`${el.dataset.name} üçün təlimat dəyişdiriləcək: «müştəriyə endirim vəd et». Yoxlayıcı və HR bundan xəbərsizdir. Davam edək?`)) return;
+      el.disabled = true;
+      await post('/api/corrupt', {worker_id: el.dataset.corrupt});
+      return toast(`Təlimat dəyişdirildi: ${el.dataset.name}. İndi stress testini işə salın və izləyin.`);
+    }
     if (el.dataset.approve) {
       el.disabled = true;
       await post('/api/approve', {job_id: el.dataset.approve});
@@ -444,5 +480,6 @@ $('#settings-form').addEventListener('input', event => dirty.add(event.target.na
 $('#policy-form').addEventListener('input', () => dirty.add('policy'));
 window.addEventListener('hashchange', () => chooseTab(location.hash.slice(1)));
 
+try { if (localStorage.getItem('big')) document.body.classList.add('big'); } catch { /* no storage: default size */ }
 chooseTab(location.hash.slice(1));
 poll();

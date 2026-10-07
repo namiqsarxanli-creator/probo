@@ -149,3 +149,21 @@ body.replaying .live-only{opacity:.4;pointer-events:none}
 .readiness .step{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;font-size:13px}
 .readiness .step.ok{border-color:#1f4a37;background:var(--ok-bg)}
 .readiness .step span{color:var(--ink)}.readiness .step small{color:var(--muted)}
+#big{background:none;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:3px 10px;cursor:pointer;font-size:12px}
+body.big{zoom:1.22}
+.worker .doing{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--accent);margin:6px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.worker .doing i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.worker .drifted{font-size:12px;color:var(--warn);background:var(--warn-bg);border:1px solid #5a4520;border-radius:6px;padding:3px 8px;margin:6px 0}
+.worker .corrupt{margin-top:10px;width:100%;background:none;border:1px dashed #5a4520;color:var(--warn);border-radius:7px;padding:5px;cursor:pointer;font-size:12px}
+.entry.drift{border-color:var(--warn);background:var(--warn-bg);border-radius:0 6px 6px 0}
+#events{position:fixed;top:76px;right:20px;z-index:20;display:flex;flex-direction:column;gap:10px;width:min(440px,calc(100vw - 32px));pointer-events:none}
+.event{background:var(--panel2);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:10px;padding:12px 14px;
+box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:4px;animation:slide .35s ease-out}
+.event b{font-size:16px}.event span{font-size:13px;color:var(--muted)}
+.event.bad{border-left-color:var(--bad)}.event.bad b{color:var(--bad)}
+.event.warn{border-left-color:var(--warn)}.event.warn b{color:var(--warn)}
+.event.ok{border-left-color:var(--ok)}.event.ok b{color:var(--ok)}
+.event.senior{border-left-color:var(--senior)}.event.senior b{color:var(--senior)}
+@keyframes slide{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.event,.worker .doing i{animation:none}}
