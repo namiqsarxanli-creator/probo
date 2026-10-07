@@ -22,13 +22,19 @@
   <div class="status"><span id="spend">—</span><span id="link" class="dot">bağlantı</span></div>
 </header>
 
+<div id="replay-bar" hidden>
+  <span class="tag">TƏKRAR</span>
+  <span id="replay-text"></span>
+  <div class="replay-track"><i id="replay-progress"></i></div>
+  <button id="replay-restart" type="button">Əvvəldən</button>
+</div>
 <main>
   <!-- SÖZ -->
   <section id="tab-soz" class="tab on">
     <div class="kpis" id="soz-kpis"></div>
     <div class="grid">
       <div class="col">
-        <div class="card compose">
+        <div class="card compose live-only">
           <h2>Müştəri kimi yaz</h2>
           <form id="ticket-form" autocomplete="off">
             <textarea name="message" rows="2" maxlength="2000" placeholder="Məs.: Paltarı 20 gün əvvəl almışam, qaytara bilərəm?" required></textarea>
@@ -59,10 +65,10 @@
     <div class="kpis" id="tender-kpis"></div>
     <div class="grid">
       <div class="col side">
-        <div class="card"><h2>Tender sənədləri</h2><div id="tender-docs"></div></div>
+        <div class="card"><h2>Tender sənədləri</h2><div id="tender-docs" class="live-only"></div></div>
         <div class="card">
           <h2>Yeni tender əlavə et</h2>
-          <form id="tender-form" autocomplete="off">
+          <form id="tender-form" class="live-only" autocomplete="off">
             <input name="title" maxlength="160" placeholder="Tenderin adı" required>
             <textarea name="body" rows="6" placeholder="Tender sənədinin mətni (başlıqlar # ilə)" required></textarea>
             <button class="primary" type="submit">Əlavə et</button>
@@ -95,7 +101,7 @@
   </section>
 
   <!-- POLICY -->
-  <section id="tab-policy" class="tab">
+  <section id="tab-policy" class="tab live-only">
     <div class="grid">
       <div class="col">
         <div class="card">

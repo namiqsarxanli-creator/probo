@@ -354,3 +354,79 @@ class ExamRejudgingTest(EngineCase):
         self.assertEqual(self.agency._one("SELECT status FROM workers WHERE id='old'")['status'], 'probation')
         self.assertEqual(len(self.models.calls), calls)
         self.assertTrue(any('ehtiyat siyahısından' in row['message'] for row in self.journal('hire')))
+
+
+class ReplayTest(EngineCase):
+    def record(self):
+        """A live run, then a later firing, saved and reopened as a replay."""
+        from datetime import datetime, timedelta
+        self.build()
+        self.run_until_idle()
+        job = self.agency.submit_ticket('Bakı daxilində çatdırılma neçəyədir?')
+        self.run_until_idle()
+        victim = self.agency.staffed('soz')[0]
+        last = datetime.fromisoformat(self.agency._one('SELECT MAX(time) AS t FROM journal')['t'])
+        fired_at = (last + timedelta(seconds=100)).isoformat(timespec='seconds')
+        with self.agency.lock, self.agency.db:
+            self.agency.db.execute("INSERT INTO journal(time, service, kind, worker_id, message, data) VALUES (?,?,?,?,?,?)",
+                                   (fired_at, 'soz', 'fire', victim['id'], f"{victim['name']} işdən çıxarıldı.", '{}'))
+            self.agency.db.execute("UPDATE workers SET status='fired' WHERE id=?", (victim['id'],))
+        path = Path(self.folder.name) / 'agency.sqlite3'
+        self.agency.close()
+        self.agency = Agency(path, self.models, replay=1)
+        self.addCleanup(self.agency.close)
+        return job, victim, last
+
+    def seek(self, moment):
+        self.agency.replay_seek(moment)
+
+    def test_start_shows_nothing_and_the_end_shows_the_recorded_outcome(self):
+        job, victim, _ = self.record()
+        self.seek(self.agency.replay['start'])
+        early = self.agency.snapshot()
+        self.assertEqual(early['journal'], [])
+        self.assertEqual(early['services']['soz']['workers'], [])
+        self.assertEqual(early['services']['soz']['jobs'], [])
+        self.seek(self.agency.replay['end'])
+        late = self.agency.snapshot()
+        self.assertEqual(late['replay']['progress'], 1.0)
+        self.assertEqual(next(j for j in late['services']['soz']['jobs'] if j['id'] == job)['status'], 'göndərildi')
+        self.assertEqual(next(w for w in late['services']['soz']['workers'] if w['id'] == victim['id'])['status'], 'fired')
+
+    def test_a_worker_appears_as_they_were_at_that_moment(self):
+        from datetime import timedelta
+        _, victim, last = self.record()
+        self.seek(last + timedelta(seconds=50))  # after hiring, before the recorded firing
+        then = self.agency.snapshot()
+        status = next(w for w in then['services']['soz']['workers'] if w['id'] == victim['id'])['status']
+        self.assertNotEqual(status, 'fired')
+        self.assertFalse(any(j['kind'] == 'fire' for j in then['journal']))
+
+    def test_replay_accepts_no_new_work_and_calls_no_model(self):
+        self.record()
+        calls = len(self.models.calls)
+        for action in (lambda: self.agency.submit_ticket('salam'), lambda: self.agency.stress(5),
+                       lambda: self.agency.set_mode('draft')):
+            with self.assertRaises(ValueError):
+                action()
+        self.assertFalse(self.agency.step())
+        self.assertEqual(len(self.models.calls), calls)
+        # The deterministic human-agent check still works, offline.
+        self.assertFalse(self.agency.human_reply('Məhsulu 30 gün ərzində qaytara bilərsiniz.')['ok'])
+
+    def test_restart_and_speed_bounds(self):
+        self.record()
+        self.agency.restart_replay(speed=30)
+        self.assertEqual(self.agency.replay['speed'], 30)
+        with self.assertRaises(ValueError):
+            self.agency.restart_replay(speed=500)
+
+
+class ReplayGapTest(ReplayTest):
+    def test_long_idle_gaps_are_squeezed(self):
+        from datetime import timedelta
+        self.record()  # contains a 100 s gap before the recorded firing
+        r = self.agency.replay
+        recorded = (r['end'] - r['start']).total_seconds()
+        self.assertLess(r['marks'][-1], recorded)  # the timeline is shorter than the recording
+        self.assertGreaterEqual(recorded - r['marks'][-1], 100 - 20 - 1)

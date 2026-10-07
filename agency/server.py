@@ -8,6 +8,8 @@ import json
 import logging
 import os
 import secrets
+import sqlite3
+import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -111,6 +113,7 @@ def make_handler(agency):
                     '/api/policy': lambda: dict(document=_public(agency.update_policy(data.get('body')))),
                     '/api/mode': lambda: agency.set_mode(data.get('mode')) or {},
                     '/api/settings': lambda: agency.set_policy(data.get('policy')) or {},
+                    '/api/replay/restart': lambda: agency.restart_replay(data.get('speed')) or {},
                 }
                 if path not in actions:
                     return self.reply(404, {'error': 'Tapılmadı.'})
@@ -132,10 +135,31 @@ def _public(doc):
     return {k: doc[k] for k in ('id', 'title', 'version', 'created_at')}
 
 
-def serve():
+def copy_database(source, target):
+    """A consistent single-file copy, even of a database another process is writing."""
+    source, target = Path(source), Path(target)
+    if not source.exists():
+        raise SystemExit(f'Qeyd faylı tapılmadı: {source}')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    reader = sqlite3.connect(f'file:{source.as_posix()}?mode=ro', uri=True)
+    writer = sqlite3.connect(target)
+    with writer:
+        reader.backup(writer)
+    reader.close()
+    writer.close()
+    return target
+
+
+def serve(replay=None, speed=10.0):
     logging.basicConfig(level=logging.INFO)
     port = int(os.environ.get('PORT', '8830'))
-    agency = Agency(ROOT / 'data' / 'agency.sqlite3', Models(Provider(ROOT)))
+    if replay:
+        # Replays run on a private copy, so the recording itself is never altered.
+        copy = copy_database(replay, Path(tempfile.mkdtemp(prefix='agency-replay-')) / 'replay.sqlite3')
+        agency = Agency(copy, Models(Provider(ROOT)), replay=speed)
+        print(f'TƏKRAR rejimi: {replay} · sürət {speed:g}×', flush=True)
+    else:
+        agency = Agency(ROOT / 'data' / 'agency.sqlite3', Models(Provider(ROOT)))
     server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(agency))
     stop = threading.Event()
 

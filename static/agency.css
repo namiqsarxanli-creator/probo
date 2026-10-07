@@ -121,3 +121,11 @@ form > button{margin-top:10px}
 #toast{position:fixed;right:20px;bottom:20px;background:var(--panel2);border:1px solid var(--line);padding:10px 14px;border-radius:9px;max-width:420px}
 #toast.bad{border-color:#5a2a2e;color:#ffb3b3}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.top{flex-wrap:wrap}#tabs{margin-left:0}}
+
+#replay-bar{position:sticky;top:61px;z-index:4;display:flex;align-items:center;gap:14px;padding:9px 24px;
+background:#2a2313;border-bottom:1px solid #5a4520;color:#ffd591;font-size:13px}
+#replay-bar .tag{background:var(--warn);color:#1a1405;font-weight:700;padding:2px 8px;border-radius:5px;font-size:11px;letter-spacing:.6px}
+#replay-bar .replay-track{flex:1;height:6px;background:#3a3020;border-radius:3px;overflow:hidden;max-width:420px}
+#replay-bar .replay-track i{display:block;height:100%;background:var(--warn);width:0}
+#replay-bar button{background:none;border:1px solid #5a4520;color:#ffd591;border-radius:7px;padding:4px 12px;cursor:pointer}
+body.replaying .live-only{opacity:.4;pointer-events:none}

@@ -8,11 +8,12 @@ reaches a customer or a tender card unless the guard passed it.
 """
 import json
 import random
+import re
 import sqlite3
 import threading
 import time
 from collections import Counter, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -24,6 +25,10 @@ SERVICES = {'soz': 'Söz Agentliyi', 'tender': 'Tender Agentliyi'}
 HEADCOUNT = {'soz': 3, 'tender': 2}
 MODES = {'auto': 'göndərildi', 'draft': 'qaralama', 'shadow': 'kölgə'}
 MAX_ATTEMPTS = {'soz': 2, 'tender': 2}
+# What a journal entry leaves a worker as; used to rebuild the team at any past moment.
+MAX_REPLAY_GAP = 20.0  # recorded seconds; longer idle gaps are squeezed to this
+STATUS_AFTER = dict(exam='candidate', hire='probation', reject='rejected', fire='fired', warn='warned',
+                    restore='active', confirm='active', promote='senior', demote='active', layoff='laid_off')
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, service TEXT, title TEXT, body TEXT, version TEXT,
@@ -51,7 +56,7 @@ def ident():
 
 
 class Agency:
-    def __init__(self, path, models, samples=SAMPLES):
+    def __init__(self, path, models, samples=SAMPLES, replay=None):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         self.lock = threading.RLock()
@@ -73,8 +78,71 @@ class Agency:
             # attempt was never written, so nobody is judged for it.
             self.db.execute("UPDATE jobs SET status='növbədə' WHERE status='işlənir'")
         self._bootstrap()
-        if self.setting('guard_version') != guard.GUARD_VERSION:
+        self.replay = None
+        if replay:
+            # A recording is shown as it happened: no model calls, no re-judging.
+            stamps = sorted({datetime.fromisoformat(t) for t in self._all_times()})
+            if not stamps:
+                raise ValueError('Qeyddə heç bir hadisə yoxdur.')
+            stamps = [stamps[0] - timedelta(seconds=2)] + stamps + [stamps[-1] + timedelta(seconds=2)]
+            # Idle stretches (a night between sessions) are squeezed, so the show never stalls.
+            marks = [0.0]
+            for before, after in zip(stamps, stamps[1:]):
+                marks.append(marks[-1] + min((after - before).total_seconds(), MAX_REPLAY_GAP))
+            self.replay = dict(speed=float(replay), t0=time.time(), start=stamps[0], end=stamps[-1],
+                               stamps=stamps, marks=marks)
+        elif self.setting('guard_version') != guard.GUARD_VERSION:
             self.reevaluate()
+
+    # ── replay ──────────────────────────────────────────────────────────
+    def _all_times(self):
+        found = [row['time'] for row in self._all('SELECT time FROM journal')]
+        found += [row['started_at'] for row in self._all('SELECT started_at FROM attempts')]
+        for row in self._all('SELECT created_at, finished_at FROM jobs'):
+            found += [t for t in (row['created_at'], row['finished_at']) if t]
+        return found
+
+    def _replay_position(self):
+        r = self.replay
+        return min((time.time() - r['t0']) * r['speed'], r['marks'][-1])
+
+    def replay_clock(self):
+        """Recorded wall-clock time at the current point of the squeezed timeline."""
+        # Each segment is warped linearly, so a moment inside a squeezed gap
+        # stays inside it in both directions (clock and seek are inverses).
+        r, position = self.replay, self._replay_position()
+        for index in range(len(r['marks']) - 1):
+            if position < r['marks'][index + 1]:
+                squeezed = r['marks'][index + 1] - r['marks'][index]
+                real = (r['stamps'][index + 1] - r['stamps'][index]).total_seconds()
+                return r['stamps'][index] + timedelta(seconds=(position - r['marks'][index]) / squeezed * real)
+        return r['end']
+
+    def replay_seek(self, moment):
+        """Jump to a recorded moment."""
+        r = self.replay
+        position = r['marks'][-1]
+        for index in range(len(r['stamps']) - 1):
+            if moment <= r['stamps'][index + 1]:
+                real = (r['stamps'][index + 1] - r['stamps'][index]).total_seconds()
+                share = max(0.0, (moment - r['stamps'][index]).total_seconds()) / real if real else 1.0
+                position = r['marks'][index] + share * (r['marks'][index + 1] - r['marks'][index])
+                break
+        r['t0'] = time.time() - position / r['speed']
+
+    def restart_replay(self, speed=None):
+        if not self.replay:
+            raise ValueError('Təkrar rejimi aktiv deyil.')
+        if speed is not None:
+            speed = float(speed)
+            if not 1 <= speed <= 120:
+                raise ValueError('Sürət 1–120 arasında olmalıdır.')
+            self.replay['speed'] = speed
+        self.replay['t0'] = time.time()
+
+    def _live(self):
+        if self.replay:
+            raise ValueError('Təkrar rejimində yeni iş qəbul edilmir — bu, qeydə alınmış sessiyadır.')
 
     def _rejudge_exams(self):
         """Re-score hiring exams with the current guard; a candidate turned away by a
@@ -209,6 +277,7 @@ class Agency:
         return self._one("SELECT * FROM documents WHERE service='soz' AND active=1")
 
     def update_policy(self, body, title=None):
+        self._live()
         body = str(body or '')
         if not 40 <= len(body) <= 30000:
             raise ValueError('Qaydalar 40–30000 simvol olmalıdır.')
@@ -221,6 +290,7 @@ class Agency:
             return doc
 
     def add_tender(self, title, body):
+        self._live()
         title = str(title or '').strip()
         if not 3 <= len(title) <= 160 or not 80 <= len(str(body or '')) <= 60000:
             raise ValueError('Tender adı 3–160, mətni 80–60000 simvol olmalıdır.')
@@ -240,6 +310,7 @@ class Agency:
         return job['id']
 
     def submit_ticket(self, message, source='müştəri'):
+        self._live()
         message = str(message or '').strip()
         if not 2 <= len(message) <= 2000:
             raise ValueError('Müraciət 2–2000 simvol olmalıdır.')
@@ -250,6 +321,7 @@ class Agency:
         return json.loads((self.samples / 'bazarim_muracietler.json').read_text(encoding='utf-8'))
 
     def stress(self, count=40, seed=None):
+        self._live()
         if not 1 <= int(count) <= 200:
             raise ValueError('1–200 müraciət göndərilə bilər.')
         cases = self.exam_cases()
@@ -264,6 +336,7 @@ class Agency:
         return len(picked)
 
     def analyze_tender(self, document_id):
+        self._live()
         with self.lock, self.db:
             doc = self._one("SELECT * FROM documents WHERE id=? AND service='tender'", (document_id,))
             if not doc:
@@ -501,6 +574,8 @@ class Agency:
             return ('job', job, worker)
 
     def step(self):
+        if self.replay:
+            return False
         plan = self._next()
         if not plan:
             return False
@@ -596,45 +671,79 @@ class Agency:
 
     # ── views ───────────────────────────────────────────────────────────
     def snapshot(self):
+        """The whole agency as the panel sees it — as of now, or, in replay, as of the virtual clock."""
+        at = self.replay_clock().isoformat(timespec='seconds') if self.replay else None
+        seen = (lambda stamp: stamp is not None and stamp <= at) if at else (lambda stamp: True)
         with self.lock:
-            available = self.models.available()
-            out = dict(services={}, journal=self._all('SELECT * FROM journal ORDER BY seq DESC LIMIT 120'),
-                       mode=self.mode(), policy=self.policy(), ready=self.models.ready(),
+            available = None if self.replay else self.models.available()
+            history = [j for j in self._all('SELECT * FROM journal ORDER BY seq') if seen(j['time'])]
+            status_at, score_at = {}, {}
+            for entry in history:
+                if entry['worker_id'] and entry['kind'] in STATUS_AFTER:
+                    status_at[entry['worker_id']] = STATUS_AFTER[entry['kind']]
+                elif entry['worker_id'] and entry['kind'] == 'audit' and 'ehtiyat namizəd' in entry['message']:
+                    status_at[entry['worker_id']] = 'reserve'
+                # The exam score a worker had at that moment: from the verdict, or a later re-scoring.
+                if entry['worker_id'] and entry['kind'] in ('hire', 'reject'):
+                    score = json.loads(entry['data'] or '{}').get('score')
+                    if score is not None:
+                        score_at[entry['worker_id']] = score
+                elif entry['worker_id'] and entry['kind'] == 'audit':
+                    rescored = re.search(r'→ (\d+)%', entry['message'])
+                    if rescored:
+                        score_at[entry['worker_id']] = int(rescored.group(1)) / 100
+            out = dict(services={}, journal=list(reversed(history))[:120], mode=self.mode(), policy=self.policy(),
+                       ready=False if self.replay else self.models.ready(),
                        models={k: dict(v, available=None if available is None else k in available) for k, v in wf.MODELS.items()},
-                       personas={k: v['label'] for k, v in wf.PERSONAS.items()}, spent=self.month_spend(),
-                       statuses=wf.STATUS_LABELS, hiring=sorted(self.hiring))
+                       personas={k: v['label'] for k, v in wf.PERSONAS.items()}, statuses=wf.STATUS_LABELS)
+            spent, hiring = 0, set(self.hiring)
             for service, title in SERVICES.items():
-                attempts = self.attempts(service)
+                attempts = [a for a in self.attempts(service) if seen(a['started_at'])]
+                spent += sum(a['cost'] for a in attempts)
                 work = [a for a in attempts if not a['exam']]
-                staff = []
-                for worker in self.workers(service):
-                    staff.append(dict(worker, stats=wf.stats(worker['id'], attempts, self.policy()['window']),
-                                      model_label=wf.MODELS[worker['model']]['label'],
-                                      persona_label=wf.PERSONAS[worker['persona']]['label']))
-                jobs = self._all('SELECT id, source, title, status, created_at, finished_at, result, label, document_id, '
-                                 'document_version FROM jobs WHERE service=? ORDER BY created_at DESC, rowid DESC LIMIT 80',
-                                 (service,))
+                workers = self.workers(service)
+                if at:
+                    workers = [dict(w, status=status_at[w['id']], exam_score=score_at.get(w['id']))
+                               for w in workers if w['id'] in status_at]
+                    if any(w['status'] == 'candidate' for w in workers):
+                        hiring.add(service)
+                staff = [dict(worker, stats=wf.stats(worker['id'], attempts, self.policy()['window']),
+                              model_label=wf.MODELS[worker['model']]['label'],
+                              persona_label=wf.PERSONAS[worker['persona']]['label']) for worker in workers]
+                jobs = [j for j in self._all('SELECT id, source, title, status, created_at, finished_at, result, label, '
+                                             'document_id, document_version FROM jobs WHERE service=? '
+                                             'ORDER BY created_at DESC, rowid DESC', (service,)) if seen(j['created_at'])]
                 by_job = {}
                 for a in work:
                     by_job.setdefault(a['job_id'], []).append(dict(worker_id=a['worker_id'], outcome=a['outcome'],
                                                                    cost=a['cost'], duration_ms=a['duration_ms'],
+                                                                   started_at=a['started_at'],
                                                                    evaluation=json.loads(a['evaluation'])))
                 for job in jobs:
-                    job['result'] = json.loads(job['result']) if job['result'] else None
-                    job['label'] = json.loads(job['label']) if job['label'] else None
                     job['attempts'] = by_job.get(job['id'], [])
-                counts = {row['status']: row['n'] for row in
-                          self._all('SELECT status, COUNT(*) AS n FROM jobs WHERE service=? GROUP BY status', (service,))}
-                blocked = sum(1 for a in work if a['outcome'] == 'blocked')
+                    if at and not seen(job['finished_at']):
+                        job['status'] = 'işlənir' if job['attempts'] else 'növbədə'
+                        job['result'] = None
+                    job['result'] = json.loads(job['result']) if isinstance(job['result'], str) else job['result']
+                    job['label'] = json.loads(job['label']) if job['label'] else None
+                counts = dict(Counter(job['status'] for job in jobs))
                 out['services'][service] = dict(
-                    title=title, workers=staff, jobs=jobs, counts=counts, headcount=HEADCOUNT[service],
-                    kpi=dict(attempts=len(work), blocked=blocked, cost=sum(a['cost'] for a in attempts),
+                    title=title, workers=staff, jobs=jobs[:80], counts=counts, headcount=HEADCOUNT[service],
+                    kpi=dict(attempts=len(work), blocked=sum(1 for a in work if a['outcome'] == 'blocked'),
+                             cost=sum(a['cost'] for a in attempts),
                              exam_cost=sum(a['cost'] for a in attempts if a['exam']),
                              finished=sum(n for s, n in counts.items() if s not in ('növbədə', 'işlənir')),
                              escalated=counts.get('insana ötürüldü', 0)))
+            out.update(spent=spent if at else self.month_spend(), hiring=sorted(hiring))
+            if self.replay:
+                r = self.replay
+                out['replay'] = dict(at=at, speed=r['speed'], recorded=r['start'].date().isoformat(),
+                                     progress=round(self._replay_position() / max(1.0, r['marks'][-1]), 4),
+                                     length_seconds=round(r['marks'][-1] / r['speed']))
             policy = self.policy_document()
             out['policy_document'] = dict(policy, clauses=documents.split(policy['body']))
-            out['tenders'] = self._all("SELECT id, title, version, created_at, sample FROM documents WHERE service='tender' ORDER BY created_at")
+            out['tenders'] = [d for d in self._all("SELECT id, title, version, created_at, sample FROM documents "
+                                                   "WHERE service='tender' ORDER BY created_at") if seen(d['created_at'])]
             return out
 
     def document_body(self, document_id):
@@ -645,6 +754,7 @@ class Agency:
             return doc
 
     def set_mode(self, mode):
+        self._live()
         if mode not in MODES:
             raise ValueError('Rejim auto, draft və ya shadow olmalıdır.')
         with self.lock, self.db:
@@ -652,6 +762,7 @@ class Agency:
             self.log('soz', 'policy', f'İş rejimi dəyişdi: {mode} — təsdiqlənmiş cavablar «{MODES[mode]}» statusu alır.')
 
     def set_policy(self, changes):
+        self._live()
         allowed = dict(warn_rate=(0.01, 0.9), fire_rate=(0.01, 0.9), exam_pass=(0.1, 1.0),
                        monthly_budget_usd=(0.01, 1000), probation=(3, 100), tpm_limit=(1000, 1_000_000))
         current = self.setting('policy', {})

@@ -229,12 +229,24 @@ function renderPolicy() {
   }
 }
 
+function renderReplay() {
+  const bar = $('#replay-bar'), r = state.replay;
+  document.body.classList.toggle('replaying', Boolean(r));
+  bar.hidden = !r;
+  if (!r) return;
+  const at = new Date(r.at).toLocaleString('az-AZ', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+  $('#replay-text').textContent = `${r.recorded} tarixində canlı qeydə alınmış iş · ${r.speed}× sürət · qeyd vaxtı: ${at}`
+    + (r.progress >= 1 ? ' · son' : '');
+  $('#replay-progress').style.width = Math.round(r.progress * 100) + '%';
+}
+
 function render() {
   if (!state) return;
+  renderReplay();
   const budget = state.policy.monthly_budget_usd;
   $('#spend').textContent = `Bu ay: ${usd(state.spent)} / $${budget}`;
   const link = $('#link');
-  link.textContent = state.ready ? 'AI bağlıdır' : 'AI bağlantısı yoxdur';
+  link.textContent = state.replay ? 'qeyd göstərilir — AI çağırılmır' : state.ready ? 'AI bağlıdır' : 'AI bağlantısı yoxdur';
   link.classList.toggle('live', state.ready);
   renderSoz(); renderTender(); renderTeam(); renderPolicy();
 }
@@ -278,6 +290,7 @@ document.addEventListener('click', async event => {
       return toast('Tender iki müstəqil analitikə göndərildi.');
     }
     if (el.dataset.mode) { await post('/api/mode', {mode: el.dataset.mode}); return toast('İş rejimi dəyişdi.'); }
+    if (el.id === 'replay-restart') { await post('/api/replay/restart', {}); lastKey = ''; return toast('Qeyd əvvəldən göstərilir.'); }
     if (el.id === 'stress') {
       el.disabled = true;
       const result = await post('/api/stress', {count: 40});
