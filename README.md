@@ -1,8 +1,18 @@
-# Autonomous Inc. — v0.2
+# Layihe5 — Sübut Agentliyi
 
-**Yeni Research Studio üçün [README_STUDIO.md](README_STUDIO.md) sənədinə baxın.**
+**Əsas layihə: [README_AGENTLIK.md](README_AGENTLIK.md)** — AI işçiləri sözünə görə işə götürülür və çıxarılır.
+Təqdimat üçün: [DEMO_SSENARI.md](DEMO_SSENARI.md).
 
-Yeni panel `main.py` ilə 8812 portunda açılır. Aşağıdakı bölmə əvvəlki v0.1 simulyatorunun arxiv sənədidir; onu `legacy.py` ilə 8811 portunda başladın.
+```bash
+py -3 main.py
+```
+
+Panel: http://127.0.0.1:8830
+
+Əvvəlki mərhələlər arxiv kimi saxlanılıb:
+
+- Research Studio v0.2 — `py -3 research_studio.py` (port 8812), sənədi: [README_STUDIO.md](README_STUDIO.md).
+- Simulyator v0.1 — `py -3 legacy.py` (port 8811), sənədi aşağıdadır.
 
 ## v0.1 — arxiv
 
