@@ -28,7 +28,7 @@ FILES = {'/': ('agency.html', 'text/html'), '/agency.js': ('agency.js', 'text/ja
          '/agency.css': ('agency.css', 'text/css')}
 
 
-def make_handler(agency, bridge=None):
+def make_handler(agency, bridge=None, sandbox=False):
     token = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):
@@ -61,7 +61,7 @@ def make_handler(agency, bridge=None):
             query = parse_qs(parts.query)
             try:
                 if parts.path == '/api/state':
-                    return self.reply(200, dict(agency.snapshot(), csrf=token,
+                    return self.reply(200, dict(agency.snapshot(), csrf=token, sandbox=sandbox,
                                                 telegram=bridge.status() if bridge else None))
                 if parts.path == '/api/document':
                     return self.reply(200, agency.document_body(query.get('id', [''])[0]))
@@ -173,7 +173,7 @@ def copy_database(source, target):
     return target
 
 
-def serve(replay=None, speed=10.0):
+def serve(replay=None, speed=10.0, rehearsal=False):
     logging.basicConfig(level=logging.INFO)
     port = int(os.environ.get('PORT', '8830'))
     if replay:
@@ -181,6 +181,14 @@ def serve(replay=None, speed=10.0):
         copy = copy_database(replay, Path(tempfile.mkdtemp(prefix='agency-replay-')) / 'replay.sqlite3')
         agency = Agency(copy, Models(Provider(ROOT)), replay=speed)
         print(f'TƏKRAR rejimi: {replay} · sürət {speed:g}×', flush=True)
+    elif rehearsal:
+        # A fresh copy of the live database on every start: rehearse firing Kamal as often as
+        # you like, the real team is untouched.
+        copy = ROOT / 'data' / 'mesq.sqlite3'
+        for suffix in ('', '-wal', '-shm'):
+            Path(str(copy) + suffix).unlink(missing_ok=True)
+        agency = Agency(copy_database(ROOT / 'data' / 'agency.sqlite3', copy), Models(Provider(ROOT)))
+        print('MƏŞQ rejimi: canlı bazanın təzə surəti (data/mesq.sqlite3) — əsl baza dəyişmir', flush=True)
     else:
         agency = Agency(ROOT / 'data' / 'agency.sqlite3', Models(Provider(ROOT)))
     stop = threading.Event()
@@ -189,7 +197,7 @@ def serve(replay=None, speed=10.0):
         bridge = TelegramBridge(agency, telegram)
         bridge.start(stop)
         print('Telegram bot: ' + (f'https://t.me/{bridge.username}' if bridge.username else f'xəta — {bridge.error}'), flush=True)
-    server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(agency, bridge))
+    server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(agency, bridge, sandbox=rehearsal))
 
     def loop():
         while not stop.is_set():

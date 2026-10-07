@@ -367,6 +367,7 @@ function render() {
   $('#spend').textContent = `Bu ay: ${usd(state.spent)} / $${budget}`;
   const link = $('#link');
   link.textContent = state.replay ? 'qeyd göstərilir — AI çağırılmır' : state.ready ? 'AI bağlıdır' : 'AI bağlantısı yoxdur';
+  if (state.sandbox && !state.replay) link.textContent += ' · məşq surəti';
   link.classList.toggle('live', state.ready);
   renderSoz(); renderTender(); renderTeam(); renderReview(); renderPolicy();
 }

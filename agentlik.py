@@ -4,6 +4,8 @@
     py -3 agentlik.py --save data/demo_qeyd.sqlite3    canlı bazanın surətini qeyd kimi saxla
     py -3 agentlik.py --replay data/demo_qeyd.sqlite3 --speed 10
                                                        qeydi sürətləndirilmiş göstər (AI çağırılmır)
+    py -3 agentlik.py --mesq                           canlı AI ilə, amma canlı bazanın təzə surətində
+                                                       (məşq və təqdimat üçün: əsl komanda dəyişmir)
 """
 import argparse
 
@@ -14,8 +16,9 @@ if __name__ == '__main__':
     parser.add_argument('--replay', metavar='QEYD', help='qeydə alınmış bazanı təkrar göstər')
     parser.add_argument('--speed', type=float, default=10.0, help='təkrar sürəti (1–120, standart 10)')
     parser.add_argument('--save', metavar='FAYL', help='canlı bazanın surətini saxla və çıx')
+    parser.add_argument('--mesq', action='store_true', help='canlı bazanın təzə surətində işlə (əsl baza dəyişmir)')
     args = parser.parse_args()
     if args.save:
         print('Saxlanıldı:', copy_database(ROOT / 'data' / 'agency.sqlite3', args.save))
     else:
-        serve(replay=args.replay, speed=min(120.0, max(1.0, args.speed)))
+        serve(replay=args.replay, speed=min(120.0, max(1.0, args.speed)), rehearsal=args.mesq)
