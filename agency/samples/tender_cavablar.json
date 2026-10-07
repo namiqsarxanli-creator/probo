@@ -1,0 +1,30 @@
+{
+  "tender_komputer.md": {
+    "satinalan": "Abşeron Su Kanal MMC",
+    "predmet": "120 ədəd ofis kompüterinin alınması",
+    "son_tarix": "28.10.2026 17:00",
+    "achilish": "29.10.2026 11:00",
+    "teminat": "təklif qiymətinin 2%-i bank zəmanəti",
+    "icra_teminati": "müqavilə qiymətinin 5%-i",
+    "tecrube": "son 3 ildə ən azı 2 oxşar müqavilə",
+    "muddet": "45 təqvim günü",
+    "odenis": "təhvil-təslim aktından sonra 30 bank günü",
+    "cerime": "hər gün üçün 0,1%",
+    "meyar": "qiymət 70 bal, texniki uyğunluq 30 bal",
+    "elaqe": "satınalma şöbəsi (012) 000 00 00"
+  },
+  "tender_temizlik.md": {
+    "satinalan": "Gəncə Şəhər Tədris Mərkəzi",
+    "predmet": "2027-ci il üçün təmizlik xidməti",
+    "son_tarix": "15.11.2026 16:00",
+    "achilish": null,
+    "teminat": "tələb olunmur",
+    "icra_teminati": null,
+    "tecrube": "ən azı 15 təmizlik işçisi",
+    "muddet": "01.01.2027 – 31.12.2027",
+    "odenis": "hər ayın sonunda 10 iş günü ərzində",
+    "cerime": "aylıq ödənişin 3%-i",
+    "meyar": "ən aşağı qiymət",
+    "elaqe": null
+  }
+}

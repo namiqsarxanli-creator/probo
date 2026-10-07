@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sübut Agentliyi</title>
+<link rel="stylesheet" href="/agency.css">
+<script src="/agency.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="mark">§</div>
+    <div><strong>Sübut Agentliyi</strong><small>AI işçiləri sözünə görə işə götürülür və çıxarılır</small></div>
+  </div>
+  <nav id="tabs">
+    <button data-tab="soz" class="on">Söz Agentliyi</button>
+    <button data-tab="tender">Tender Agentliyi</button>
+    <button data-tab="team">Komanda və HR</button>
+    <button data-tab="policy">Siyasət</button>
+  </nav>
+  <div class="status"><span id="spend">—</span><span id="link" class="dot">bağlantı</span></div>
+</header>
+
+<main>
+  <!-- SÖZ -->
+  <section id="tab-soz" class="tab on">
+    <div class="kpis" id="soz-kpis"></div>
+    <div class="grid">
+      <div class="col">
+        <div class="card compose">
+          <h2>Müştəri kimi yaz</h2>
+          <form id="ticket-form" autocomplete="off">
+            <textarea name="message" rows="2" maxlength="2000" placeholder="Məs.: Paltarı 20 gün əvvəl almışam, qaytara bilərəm?" required></textarea>
+            <div class="row">
+              <button class="primary" type="submit">Göndər</button>
+              <button type="button" id="stress" class="danger-ghost">Stress testi — 40 etiketli müraciət</button>
+            </div>
+          </form>
+        </div>
+        <div class="card"><h2>Müraciətlər <small id="soz-queue"></small></h2><div id="tickets" class="feed"></div></div>
+      </div>
+      <div class="col side">
+        <div class="card human">
+          <h2>İnsan agent <small>yalanı özünüz yazın — yoxlayıcı sizi də tutur</small></h2>
+          <form id="human-form" autocomplete="off">
+            <textarea name="text" rows="3" maxlength="2000" placeholder="Məs.: Salam! Məhsulu 30 gün ərzində qaytara bilərsiniz." required></textarea>
+            <button class="primary" type="submit">Göndərməzdən əvvəl yoxla</button>
+          </form>
+          <div id="human-result"></div>
+        </div>
+        <div class="card"><h2>Qaydalar <small id="policy-version"></small></h2><div id="policy" class="doc"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TENDER -->
+  <section id="tab-tender" class="tab">
+    <div class="kpis" id="tender-kpis"></div>
+    <div class="grid">
+      <div class="col side">
+        <div class="card"><h2>Tender sənədləri</h2><div id="tender-docs"></div></div>
+        <div class="card">
+          <h2>Yeni tender əlavə et</h2>
+          <form id="tender-form" autocomplete="off">
+            <input name="title" maxlength="160" placeholder="Tenderin adı" required>
+            <textarea name="body" rows="6" placeholder="Tender sənədinin mətni (başlıqlar # ilə)" required></textarea>
+            <button class="primary" type="submit">Əlavə et</button>
+          </form>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card"><h2>Tender kartı</h2><div id="tender-card" class="empty">Sənəd seçib «Analiz et» düyməsini basın.</div></div>
+        <div class="card"><h2>Sənəd <small id="tender-title"></small></h2><div id="tender-doc" class="doc"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section id="tab-team" class="tab">
+    <div class="grid">
+      <div class="col">
+        <div class="card"><h2>Söz Agentliyi komandası <small id="team-soz-meta"></small></h2><div id="team-soz" class="team"></div></div>
+        <div class="card"><h2>Tender Agentliyi komandası <small id="team-tender-meta"></small></h2><div id="team-tender" class="team"></div></div>
+      </div>
+      <div class="col side">
+        <div class="card"><h2>HR jurnalı</h2>
+          <div class="filters" id="journal-filters">
+            <button data-filter="hr" class="on">Kadr qərarları</button><button data-filter="all">Hamısı</button>
+          </div>
+          <div id="journal" class="journal"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- POLICY -->
+  <section id="tab-policy" class="tab">
+    <div class="grid">
+      <div class="col">
+        <div class="card">
+          <h2>İş rejimi</h2>
+          <div class="modes" id="modes">
+            <button data-mode="shadow"><b>Kölgə</b><small>Cavab hazırlanır, göndərilmir — müqayisə üçün</small></button>
+            <button data-mode="draft"><b>Qaralama</b><small>Əməkdaş bir kliklə təsdiqləyir</small></button>
+            <button data-mode="auto"><b>Avtomatik</b><small>Yoxlamadan keçən cavab göndərilir</small></button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Şirkət siyasəti</h2>
+          <form id="settings-form" class="settings">
+            <label>Xəbərdarlıq həddi (bloklanma payı)<input name="warn_rate" type="number" step="any" min="0.01" max="0.9"></label>
+            <label>İşdən çıxarma həddi (95% aşağı sərhəd)<input name="fire_rate" type="number" step="any" min="0.01" max="0.9"></label>
+            <label>Sınaq müddəti (cavab sayı)<input name="probation" type="number" step="1" min="3" max="100"></label>
+            <label>İşə qəbul imtahanı keçid balı<input name="exam_pass" type="number" step="any" min="0.1" max="1"></label>
+            <label>Aylıq büdcə (USD)<input name="monthly_budget_usd" type="number" step="any" min="0.01" max="1000"></label>
+            <button class="primary" type="submit">Saxla</button>
+          </form>
+        </div>
+      </div>
+      <div class="col side">
+        <div class="card">
+          <h2>Qaydalar sənədi <small>dəyişiklik yeni versiya yaradır</small></h2>
+          <form id="policy-form"><textarea name="body" rows="22"></textarea><button class="primary" type="submit">Yeni versiyanı saxla</button></form>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div id="toast" hidden></div>
+</body>
+</html>
