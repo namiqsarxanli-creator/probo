@@ -122,7 +122,8 @@ def review(workers, attempts, policy=POLICY):
         elif s['block_rate'] > policy['warn_rate'] and worker['status'] != 'warned':
             actions.append(dict(kind='warn', worker_id=worker['id'], status='warned', stats=s,
                                 message=f"{worker['name']} yazılı xəbərdarlıq aldı. {evidence}"))
-        elif worker['status'] == 'warned' and s['block_rate'] <= policy['warn_rate']:
+        # Lifted only well under the line, or a worker hovering at 10% is warned and cleared every few answers.
+        elif worker['status'] == 'warned' and s['block_rate'] <= policy['warn_rate'] * 0.75:
             actions.append(dict(kind='restore', worker_id=worker['id'], status='active', stats=s,
                                 message=f"{worker['name']} üzrə xəbərdarlıq götürüldü. {evidence}"))
         elif worker['status'] == 'probation':

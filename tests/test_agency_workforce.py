@@ -49,6 +49,10 @@ class ReviewTest(unittest.TestCase):
         actions = wf.review([worker('a', 'warned')], record)
         self.assertEqual(self.act(actions, 'restore')[0]['status'], 'active')
 
+    def test_a_warning_is_not_lifted_right_at_the_line(self):
+        actions = wf.review([worker('a', 'warned')], attempts('a', 27, 3))  # exactly 10%
+        self.assertFalse(self.act(actions, 'restore'))
+
     def test_probation_ends_with_a_clean_record(self):
         actions = wf.review([worker('a', 'probation')], attempts('a', 10, 0))
         self.assertTrue(self.act(actions, 'confirm'))
