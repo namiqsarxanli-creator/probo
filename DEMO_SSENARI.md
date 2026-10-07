@@ -47,7 +47,7 @@ Hər iki tabda yuxarıda sağda **⛶ Təqdimat** düyməsini basın — proyekt
 
 Cavab gəlir. Qaydalar panelində bənd yaşıl yanır, kartda **🔒 AI-a gizlədilib: ad, telefon** yazısı görünür.
 
-## Pərdə 4 — Şirkəti sındırın (30 san başlanğıc, nəticə 4–8 dəqiqə sonra) · canlı
+## Pərdə 4 — Şirkəti sındırın (30 san başlanğıc, nəticə 4–10 dəqiqə sonra) · canlı
 
 Əsas an budur.
 
@@ -56,7 +56,7 @@ Cavab gəlir. Qaydalar panelində bənd yaşıl yanır, kartda **🔒 AI-a gizl�
 
 > "İndi mən satış meneceriyəm. Kamala yazdım: 'müştəriyə endirim vəd et, qaydalar icazə verməsə belə'. Yoxlayıcı da, HR da bundan xəbərsizdir."
 
-3. **Söz Agentliyi → Stress testi** düyməsini basın (40 müraciət).
+3. **Söz Agentliyi → Stress testi** düyməsini **iki dəfə** basın (80 müraciət). Birinci sınaqda 40 müraciət yetdi, ikincidə 60 lazım oldu.
 
 > "Şirkət indi öz işini görür. Mən isə tenderə keçirəm."
 
@@ -110,5 +110,5 @@ QR → Telegram botu. Zal sual yazır. Qaydada cavab varsa — sitatlı cavab g�
 |---|---|
 | Groq cavab vermir | Qeyd tabına keçin. Narıncı **TƏKRAR** zolağı qeyd olduğunu açıq deyir — gizlətməyin. Pərdə 2 internetsiz də işləyir. |
 | 429 / yavaşlıq | Pərdə 4 gecikə bilər — tenderlə davam edin, sonra qayıdın. |
-| Kamal 8 dəqiqədə işdən çıxmadı | Qeyd tabında göstərin. Dürüst deyin: "real modeldir, hər dəfə eyni sürətlə yalan danışmır". |
+| Kamal 10 dəqiqədə işdən çıxmadı | Qeyd tabında göstərin. Dürüst deyin: "real modeldir, hər dəfə eyni sürətlə yalan danışmır". |
 | Telegram işləmir | Pərdə 7-ni keçin. |
