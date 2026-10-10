@@ -92,7 +92,7 @@ py -3 agentlik.py --save data/demo_qeyd.sqlite3
 py -3 agentlik.py --replay data/demo_qeyd.sqlite3 --speed 10
 ```
 
-Birincisi canlı bazanın surətini qeyd kimi saxlayır, ikincisi qeydi təkrar göstərir. `py -3 agentlik.py --mesq` canlı AI ilə, amma hər dəfə canlı bazanın təzə surətində işləyir — məşq üçün. Canlı panel və qeyd eyni vaxtda işləyə bilər: qeydi `PORT=8831` ilə başladın (`DEMO_SSENARI.md`). Telegram üçün @BotFather ilə bot yaradıb tokeni `.env`-də `TELEGRAM_BOT_TOKEN=` sətrinə yazın. Botun QR kodu paneldə avtomatik görünür (`py -3 -m pip install segno` lazımdır, `requirements.txt`). Əvvəlki Research Studio: `py -3 research_studio.py` (port 8812).
+Birincisi canlı bazanın surətini qeyd kimi saxlayır, ikincisi qeydi təkrar göstərir. `py -3 agentlik.py --mesq` canlı AI ilə, amma hər dəfə canlı bazanın təzə surətində işləyir — məşq üçün. Canlı panel və qeyd eyni vaxtda işləyə bilər: qeydi `PORT=8831` ilə başladın (`docs/DEMO_SSENARI.md`). Telegram üçün @BotFather ilə bot yaradıb tokeni `.env`-də `TELEGRAM_BOT_TOKEN=` sətrinə yazın. Botun QR kodu paneldə avtomatik görünür (`py -3 -m pip install segno` lazımdır, `requirements.txt`). Əvvəlki Research Studio: `py -3 research_studio.py` (port 8812).
 
 ## Real nəticələr
 
@@ -203,7 +203,7 @@ Bu sınaq HR-da iki zəif yer üzə çıxardı, ikisi də düzəldildi:
 py -3 -m unittest discover -s tests
 ```
 
-236 test xarici AI və ya Telegram-a sorğu göndərmir — saxta model, saxta Telegram API istifadə olunur. Testlərin bir hissəsi canlı sınaqlarda tapılmış real hallardan götürülüb (`LiveRunRegressionTest`, `SecondLiveRunTest`).
+251 test xarici AI və ya Telegram-a sorğu göndərmir — saxta model, saxta Telegram API istifadə olunur. Testlərin bir hissəsi canlı sınaqlarda tapılmış real hallardan götürülüb (`LiveRunRegressionTest`, `SecondLiveRunTest`).
 
 ## Arxitektura
 
