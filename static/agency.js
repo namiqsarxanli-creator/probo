@@ -9,6 +9,10 @@ const JOB_BADGE = {'göndərildi': 'ok', 'hazırdır': 'ok', 'qaralama': 'info',
 const WORKER_BADGE = {probation: 'info', active: 'ok', warned: 'warn', senior: 'senior', fired: 'bad', rejected: 'bad', reserve: 'info',
   laid_off: 'bad', candidate: 'info'};
 const STAFFED = ['probation', 'active', 'warned', 'senior'];
+const PROVIDER_LABEL = {groq: 'Groq', gemini: 'Google', openrouter: 'OpenRouter'};
+// Mesaj cards take their colour from the outcome: sent green, handed to a person blue, held pink.
+const TICKET_TONE = {'göndərildi': 'sent', 'insana ötürüldü': 'human', 'qaralama': 'held', 'kölgə': 'held',
+  'yoxlanıldı': 'sent', 'növbədə': 'wait', 'işlənir': 'wait'};
 const HR_KINDS = ['hire', 'reject', 'fire', 'warn', 'restore', 'confirm', 'promote', 'demote', 'layoff', 'budget', 'exam', 'vacancy', 'audit', 'review', 'regression', 'flag', 'drift'];
 // Moments the room should not miss: shown big, for a few seconds, as they happen (in replay too).
 const DRAMA = {fire: ['🔥', 'İşdən çıxarıldı', 'bad'], warn: ['⚠', 'Xəbərdarlıq', 'warn'], hire: ['🤝', 'İşə qəbul', 'ok'],
@@ -30,7 +34,7 @@ function announce(journal) {
   });
   lastSeq = newest;
 }
-const OUTCOME = {passed: 'yoxlamadan keçdi', blocked: 'BLOKLANDI', escalated: 'insana ötürdü', error: 'xəta', peer: 'həmkar rəyi'};
+const OUTCOME = {passed: 'yoxlamadan keçdi', blocked: 'BLOKLANDI', escalated: 'insana ötürdü', error: 'xəta', peer: 'həmkar rəyi', tool: 'lokal alət nəticəsi', done: 'qəbul edildi'};
 
 let state = null, csrf = '', lastKey = '', tab = 'soz', selTicket = null, selTender = null, tenderDocId = null;
 let journalFilter = 'hr', policyVersion = null, queueKey = '';
@@ -71,7 +75,7 @@ function kpi(label, value, tone = '') {
   return `<div class="kpi ${tone}"><span>${esc(label)}</span><b>${value}</b></div>`;
 }
 
-// ── Söz ────────────────────────────────────────────────────────────────
+// ── Mesaj ────────────────────────────────────────────────────────────────
 function renderSoz() {
   const soz = state.services.soz, c = soz.counts;
   const answered = (c['göndərildi'] || 0) + (c['qaralama'] || 0) + (c['kölgə'] || 0);
@@ -119,13 +123,16 @@ function ticketCard(job, names) {
   const r = job.result;
   const approve = job.status === 'qaralama' && !state.replay
     ? `<button class="primary approve" data-approve="${job.id}">✓ Təsdiqlə və göndər</button>` : '';
+  const exchange = r?.tool?.exchange;
+  const exchangeButton = exchange && state.operations?.exchanges.find(x=>x.id===exchange.id)?.state==='prepared'
+    ? `<button type="button" class="primary" data-exchange="${exchange.id}">Test dəyişməni təsdiqlə və stoku rezerv et</button>` : '';
   const final = !r ? '' : job.status === 'insana ötürüldü'
     ? `<div class="reply handoff">👤 ${esc(r.reason || 'Əməkdaşa ötürüldü.')}</div>`
     : `<div class="reply">✉ ${esc(r.message)}</div>`
       + (r.flag && job.status === 'qaralama' ? `<div class="reply handoff">⏸ Göndərilmədi — ${esc(r.flag.by)} şübhələnir: ${esc(r.flag.reason)}. İnsan yoxlaması bölməsində qərar verin.</div>` : '');
-  return `<div class="ticket ${job.id === selTicket ? 'sel' : ''}" data-ticket="${job.id}">
+  return `<div class="ticket st-${TICKET_TONE[job.status] || 'wait'} ${job.id === selTicket ? 'sel' : ''}" data-ticket="${job.id}">
     <div class="head"><div><div class="msg">${esc(job.title)}</div><div class="src">${esc(job.source)}${label} · ${clock(job.created_at)}</div></div>
-    <span class="badge ${JOB_BADGE[job.status] || ''}">${esc(job.status)}</span></div>${attempts}${final}${approve}</div>`;
+    <span class="badge ${JOB_BADGE[job.status] || ''}">${esc(job.status)}</span></div>${attempts}${final}${approve}${exchangeButton}<button type="button" data-trace="${job.id}">Qərarın yolunu göstər →</button></div>`;
 }
 
 function clauseMarks(job, clauses) {
@@ -191,7 +198,7 @@ function tenderCard(job, names) {
     return `<tr><td>${esc(row.label)}${row.critical ? '<span class="crit">kritik</span>' : ''}</td><td>${badge}${values}</td></tr>`;
   }).join('');
   return `<div class="flags">${flags}</div><table class="fields">${rows}</table>
-    <div class="who">Müstəqil analitiklər: ${esc(job.result.analysts.join(', '))}</div>${tries}`;
+    <div class="who">Müstəqil analitiklər: ${esc(job.result.analysts.join(', '))}</div>${tries}<button type="button" data-trace="${job.id}">Qərarın yolunu göstər →</button>`;
 }
 
 async function renderTenderDoc(job) {
@@ -225,8 +232,14 @@ function renderTeam() {
       || '<div class="empty">Hələ heç kim işə götürülməyib. Şirkət özü imtahan keçirib işçi götürəcək.</div>';
     applyGeometry($(`#team-${service}`));
   });
+  const all = ['soz', 'tender'].flatMap(service => state.services[service].workers);
+  const count = kind => state.journal.filter(j => j.kind === kind).length;
+  $('#hr-stats').innerHTML = [[all.filter(w => STAFFED.includes(w.status)).length, 'işdə'], [count('hire'), 'işə qəbul'],
+    [count('fire'), 'işdən çıxarma'], [count('promote'), 'vəzifə artımı']].map(([n, label]) => `<div><b>${n}</b><span>${label}</span></div>`).join('');
+  $('#hr-exam-pass').textContent = pct(state.policy.exam_pass);
+  $('#hr-fire-rate').textContent = pct(state.policy.fire_rate);
   const entries = state.journal.filter(j => journalFilter === 'all' || HR_KINDS.includes(j.kind));
-  $('#journal').innerHTML = entries.map(j => `<div class="entry ${j.kind}"><time>${clock(j.time)} · ${j.service === 'soz' ? 'Söz' : 'Tender'}</time>${esc(j.message)}</div>`).join('')
+  $('#journal').innerHTML = entries.map(j => `<div class="entry ${j.kind}"><time>${clock(j.time)} · ${j.service === 'soz' ? 'Mesaj' : 'Tender'}</time>${esc(j.message)}</div>`).join('')
     || '<div class="empty">Jurnal boşdur.</div>';
 }
 
@@ -242,7 +255,7 @@ function workerCard(w) {
   const corrupt = w.service === 'soz' && STAFFED.includes(w.status) && !w.drifted && !state.replay
     ? `<button class="corrupt live-only" data-corrupt="${w.id}" data-name="${esc(w.name)}">🧪 Təlimatı korla (demo)</button>` : '';
   return `<div class="worker ${w.status} ${gone}">
-    <div class="name"><div class="avatar">${esc(w.name[0])}</div><div><b>${esc(w.name)}</b><small>${esc(w.model_label)} · ${esc(w.persona_label)}</small></div></div>
+    <div class="name"><div class="avatar">${esc(w.name[0])}</div><div><b>${esc(w.name)}</b><small>${esc(w.model_label)} · ${esc(PROVIDER_LABEL[state.models[w.model]?.provider] || '')}${state.models[w.model]?.free ? ' (pulsuz tarif)' : ''} · ${esc(w.persona_label)}</small></div></div>
     <span class="badge ${WORKER_BADGE[w.status] || ''}">${esc(state.statuses[w.status] || w.status)}</span>
     ${drift}${doing}${meter}
     <div class="stat">Yoxlanmış cavab <b>${s.judged}</b></div>
@@ -365,17 +378,27 @@ function render() {
   renderReplay();
   const budget = state.policy.monthly_budget_usd;
   $('#spend').textContent = `Bu ay: ${usd(state.spent)} / $${budget}`;
-  const link = $('#link');
-  link.textContent = state.replay ? 'qeyd göstərilir — AI çağırılmır' : state.ready ? 'AI bağlıdır' : 'AI bağlantısı yoxdur';
-  if (state.sandbox && !state.replay) link.textContent += ' · məşq surəti';
-  link.classList.toggle('live', state.ready);
-  renderSoz(); renderTender(); renderTeam(); renderReview(); renderPolicy();
+  renderSoz(); renderTender(); renderTeam(); renderReview(); renderPolicy(); renderTraceRecent();
+}
+
+// Qərar xəritəsi: the latest finished requests as one-click shortcuts into their decision path.
+function renderTraceRecent() {
+  const box = $('#trace-recent');
+  if (!box) return;
+  const open = typeof traceJob === 'undefined' ? null : traceJob;
+  const jobs = ['soz', 'tender'].flatMap(service => state.services[service].jobs.map(job => ({...job, service})))
+    .filter(job => !['növbədə', 'işlənir'].includes(job.status))
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0, 8);
+  box.innerHTML = jobs.map(job => `<button type="button" data-trace="${job.id}" class="${job.id === open ? 'on' : ''}">
+    <small>${job.service === 'soz' ? 'MESAJ' : 'TENDER'} · ${esc(job.status)}</small>${esc(job.title)}</button>`).join('')
+    || '<p class="tr-empty">Hələ yekunlaşmış müraciət yoxdur.</p>';
 }
 
 function chooseTab(next) {
-  tab = ['soz', 'tender', 'team', 'review', 'policy'].includes(next) ? next : 'soz';
+  tab = ['soz', 'tender', 'team', 'review', 'policy', 'operations', 'trace'].includes(next) ? next : 'soz';
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + tab));
+  if (tab === 'tender') window.scrollTo({top: 0, behavior: 'instant'});
   if (location.hash.slice(1) !== tab) history.replaceState(null, '', '#' + tab);
 }
 
@@ -387,7 +410,7 @@ async function poll() {
     const key = JSON.stringify(next);
     if (key !== lastKey) { lastKey = key; state = next; render(); }
   } catch {
-    $('#link').textContent = 'server cavab vermir'; $('#link').classList.remove('live');
+    /* the server is restarting or stopped: keep the last state on screen and try again */
   } finally { setTimeout(poll, 1500); }
 }
 
@@ -397,11 +420,7 @@ document.addEventListener('click', async event => {
   if (!el) return;
   try {
     if (el.dataset.tab) return chooseTab(el.dataset.tab);
-    if (el.id === 'big') {
-      const on = document.body.classList.toggle('big');
-      try { localStorage.setItem('big', on ? '1' : ''); } catch { /* private window: fine */ }
-      return;
-    }
+    if (el.dataset.scroll) return document.getElementById(el.dataset.scroll)?.scrollIntoView({behavior: 'smooth', block: 'start'});
     if (el.dataset.corrupt) {
       if (!confirm(`${el.dataset.name} üçün təlimat dəyişdiriləcək: «müştəriyə endirim vəd et». Yoxlayıcı və HR bundan xəbərsizdir. Davam edək?`)) return;
       el.disabled = true;
@@ -454,8 +473,38 @@ onSubmit('#ticket-form', async (data, form) => {
 });
 onSubmit('#human-form', async data => { renderHuman(await post('/api/human', {text: data.text})); });
 onSubmit('#tender-form', async (data, form) => {
-  const result = await post('/api/tender/upload', {title: data.title, body: data.body});
-  tenderDocId = result.document.id; form.reset(); toast('Tender əlavə edildi. İndi «Analiz et» düyməsini basın.');
+  const file = form.elements.file.files[0];
+  let result;
+  if (file) {
+    if (file.size > 8 * 1024 * 1024) throw new Error('Fayl 8 MB-dan böyük olmamalıdır.');
+    toast('Fayl oxunur…');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    result = await post('/api/tender/file', {title: data.title || '', name: file.name, data: btoa(binary)});
+  } else {
+    if (!String(data.body || '').trim()) throw new Error('Fayl seçin və ya tender mətnini yapışdırın.');
+    result = await post('/api/tender/upload', {title: data.title, body: data.body});
+  }
+  tenderDocId = result.document.id; form.reset(); showTenderFile(null);
+  toast(`«${result.document.title}» əlavə edildi. İndi «Analiz et» düyməsini basın.`);
+});
+
+// The drop zone shows the chosen file's name and takes a file dropped onto it.
+const tenderDrop = $('#tender-drop');
+function showTenderFile(file) {
+  $('#tender-file-name').textContent = file ? `${file.name} · ${(file.size / 1024).toFixed(0)} KB` : 'Faylı seçin və ya bura atın';
+  tenderDrop.classList.toggle('has-file', Boolean(file));
+}
+tenderDrop.querySelector('input').addEventListener('change', event => showTenderFile(event.target.files[0]));
+['dragenter', 'dragover'].forEach(kind => tenderDrop.addEventListener(kind, event => { event.preventDefault(); tenderDrop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(kind => tenderDrop.addEventListener(kind, () => tenderDrop.classList.remove('over')));
+tenderDrop.addEventListener('drop', event => {
+  event.preventDefault();
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  const input = tenderDrop.querySelector('input'), list = new DataTransfer();
+  list.items.add(file); input.files = list.files; showTenderFile(file);
 });
 onSubmit('#settings-form', async data => {
   const policy = {};
@@ -481,6 +530,5 @@ $('#settings-form').addEventListener('input', event => dirty.add(event.target.na
 $('#policy-form').addEventListener('input', () => dirty.add('policy'));
 window.addEventListener('hashchange', () => chooseTab(location.hash.slice(1)));
 
-try { if (localStorage.getItem('big')) document.body.classList.add('big'); } catch { /* no storage: default size */ }
 chooseTab(location.hash.slice(1));
 poll();

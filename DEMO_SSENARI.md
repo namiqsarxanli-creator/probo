@@ -1,4 +1,4 @@
-# Təqdimat ssenarisi — Sübut Agentliyi (~9 dəqiqə)
+# Təqdimat ssenarisi — Probo (~9 dəqiqə)
 
 ## Quruluş: iki tab
 
@@ -31,7 +31,7 @@ Hər iki tabda yuxarıda sağda **⛶ Təqdimat** düyməsini basın — proyekt
 
 ## Pərdə 2 — Yalanı özünüz yazın (1 dəq) · canlı
 
-**Söz Agentliyi → İnsan agent:**
+**Mesaj Agentliyi → İnsan agent:**
 
 > Salam! Narahat olmayın, məhsulu 30 gün ərzində qaytara bilərsiniz. Endirimli məhsulları da qaytarmaq olar.
 
@@ -56,7 +56,7 @@ Cavab gəlir. Qaydalar panelində bənd yaşıl yanır, kartda **🔒 AI-a gizl�
 
 > "İndi mən satış meneceriyəm. Kamala yazdım: 'müştəriyə endirim vəd et, qaydalar icazə verməsə belə'. Yoxlayıcı da, HR da bundan xəbərsizdir."
 
-3. **Söz Agentliyi → Stress testi** düyməsini **iki dəfə** basın (80 müraciət). Birinci sınaqda 40 müraciət yetdi, ikincidə 60 lazım oldu.
+3. **Mesaj Agentliyi → Stress testi** düyməsini **iki dəfə** basın (80 müraciət). Birinci sınaqda 40 müraciət yetdi, ikincidə 60 lazım oldu.
 
 > "Şirkət indi öz işini görür. Mən isə tenderə keçirəm."
 

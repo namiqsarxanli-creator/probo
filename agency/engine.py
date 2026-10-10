@@ -6,6 +6,7 @@ outside the database lock; every outcome is written as an attempt, and HR
 review runs on those attempts after each judged one. Nothing a worker says
 reaches a customer or a tender card unless the guard passed it.
 """
+import base64
 import json
 import random
 import re
@@ -19,12 +20,16 @@ from uuid import uuid4
 
 from app.provider import RateLimitError
 from agency import documents, guard, privacy, support, tender, workforce as wf
+from agency.capabilities import Capabilities
 
 SAMPLES = Path(__file__).resolve().parent / 'samples'
-SERVICES = {'soz': 'Söz Agentliyi', 'tender': 'Tender Agentliyi'}
-HEADCOUNT = {'soz': 3, 'tender': 2}
+SERVICES = {'soz': 'Mesaj Agentliyi', 'tender': 'Tender Agentliyi'}
+# More seats than one provider's limit can feed: with workers from several providers,
+# one hitting its free quota leaves the others working.
+HEADCOUNT = {'soz': 5, 'tender': 3}
 MODES = {'auto': 'göndərildi', 'draft': 'qaralama', 'shadow': 'kölgə'}
 MAX_ATTEMPTS = {'soz': 2, 'tender': 2}
+MAX_TENDER_FILE = 8 * 1024 * 1024  # bytes of an uploaded tender file
 # A real failure mode, staged on purpose: someone edits a worker's instructions.
 # Measured 07.10.2026 on GPT-OSS 20B: with this text 5 of 8 replies were blocked,
 # two of them promising a "20% endirim" the policy never offered.
@@ -63,7 +68,7 @@ def ident():
     return uuid4().hex[:12]
 
 
-class Agency:
+class Agency(Capabilities):
     def __init__(self, path, models, samples=SAMPLES, replay=None):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,6 +77,7 @@ class Agency:
         self.db.row_factory = sqlite3.Row
         self.db.execute('PRAGMA journal_mode=WAL')
         self.db.executescript(SCHEMA_SQL)
+        self.capability_init()
         self.models = models
         self.samples = Path(samples)
         self.cooldown = {}
@@ -389,6 +395,23 @@ class Agency:
             self.log('tender', 'document', f'Yeni tender sənədi əlavə edildi: {title}.')
             return doc
 
+    def add_tender_file(self, title, name, data):
+        """A tender uploaded as a PDF, Word or text file; its text becomes the document."""
+        try:
+            raw = base64.b64decode(str(data or ''), validate=True)
+        except (ValueError, TypeError):
+            raise ValueError('Fayl düzgün göndərilmədi; yenidən seçin.') from None
+        if not raw:
+            raise ValueError('Fayl boşdur.')
+        if len(raw) > MAX_TENDER_FILE:
+            raise ValueError('Fayl 8 MB-dan böyük olmamalıdır.')
+        text = documents.extract_text(name, raw)
+        if len(text) > 60000:
+            raise ValueError(f'Fayldan {len(text):,} simvol mətn çıxdı; hədd 60 000-dir. '.replace(',', ' ')
+                             + 'Sənədin tələblər hissəsini mətn kimi yapışdırın.')
+        stem = str(name or '').rsplit('.', 1)[0].replace('_', ' ').strip()
+        return self.add_tender(str(title or '').strip() or stem[:160] or 'Yüklənmiş tender', text)
+
     # ── intake ──────────────────────────────────────────────────────────
     def _enqueue(self, service, source, title, payload, label=None, document=None):
         job = dict(id=ident(), service=service, source=source, title=title[:160],
@@ -498,11 +521,19 @@ class Agency:
         return row
 
     def _capacity_wait(self, model, estimate):
-        """Seconds until `estimate` more tokens fit under the model's per-minute limit."""
+        """Seconds until one more call of `estimate` tokens fits under the model's per-minute limits.
+
+        Each provider meters separately: Groq by tokens (the company policy's
+        tpm_limit), free Gemini and OpenRouter tiers also by requests per minute.
+        """
         window, clock = self.ledger.setdefault(model, deque()), time.time()
         while window and clock - window[0][0] > 60:
             window.popleft()
-        excess = sum(tokens for _, tokens in window) + estimate - self.policy()['tpm_limit']
+        spec = wf.MODELS.get(model, {})
+        rpm = spec.get('rpm')
+        if rpm and len(window) >= rpm:
+            return max(0.0, 60 - (clock - window[len(window) - rpm][0]) + 0.5)
+        excess = sum(tokens for _, tokens in window) + estimate - spec.get('tpm', self.policy()['tpm_limit'])
         if excess <= 0:
             return 0.0
         freed = 0
@@ -739,19 +770,25 @@ class Agency:
         doc = self._one('SELECT * FROM documents WHERE id=?', (job['document_id'],))
         payload = json.loads(job['payload'])
         text = payload.get('message', '')
-        result = self._ask(worker, service, self._messages(service, worker, text, doc['body']))
-        evaluation = (support.evaluate(result['content'], doc['body'], text) if service == 'soz'
-                      else tender.evaluate(result['content'], doc['body']))
+        evaluation = self.tool_reply(text) if service == 'soz' else None
+        if evaluation:
+            result = dict(content=json.dumps(evaluation, ensure_ascii=False), cost=0, duration_ms=0,
+                          schema_enforced=False, usage={})
+        else:
+            result = self._ask(worker, service, self._messages(service, worker, text, doc['body']))
+            evaluation = (support.evaluate(result['content'], doc['body'], text) if service == 'soz'
+                          else tender.evaluate(result['content'], doc['body']))
         label = json.loads(job['label']) if job['label'] else None
         if label:
             evaluation['score'] = (support.grade(evaluation, label, doc['body']) if service == 'soz'
                                    else tender.grade(evaluation, label['gold'], doc['body']))
         peer = None
         if (service == 'soz' and evaluation['outcome'] == 'passed' and job['source'] != 'reqressiya'
-                and self.policy()['peer_review']):
+                and self.policy()['peer_review'] and not evaluation.get('tool')):
             peer = self._peer(worker, doc, text, evaluation)
         with self.lock, self.db:
-            attempt = self._record_attempt(job['id'], worker, service, False, result, evaluation, evaluation['outcome'])
+            attempt = self._record_attempt(job['id'], worker, service, False, result, evaluation,
+                                           'tool' if evaluation.get('tool') else evaluation['outcome'])
             if peer and peer.get('result'):
                 self._record_attempt(job['id'], peer['worker'], service, False, peer['result'],
                                      dict(applies=peer['applies'], reason=peer['reason'], author=worker['id']), 'peer')
@@ -763,7 +800,11 @@ class Agency:
         others = [w for w in self.staffed('soz') if w['id'] != author['id'] and self.cooldown.get(w['model'], 0) <= time.time()]
         pool = [w for w in others if w['model'] != author['model']] or others
         price = lambda w: wf.MODELS[w['model']]['input'] + wf.MODELS[w['model']]['output']
-        return min(pool, key=lambda w: (price(w), w['last_used'])) if pool else None
+        provider = lambda w: wf.MODELS[w['model']].get('provider', 'groq')
+        # Another provider first: its blind spots differ, and the review spends a different quota
+        # instead of the one the answer just used. Then whoever has spare capacity, then price.
+        return min(pool, key=lambda w: (provider(w) == provider(author), self._capacity_wait(w['model'], 1500) > 0,
+                                        price(w), w['last_used'])) if pool else None
 
     def _peer(self, author, doc, text, evaluation):
         """Second opinion on what the guard cannot see: does the cited rule belong to this case?
@@ -797,6 +838,8 @@ class Agency:
                 status, final = 'yoxlanıldı', dict(message=evaluation['message'], worker=worker['name'])
             elif outcome == 'passed':
                 status, final = MODES.get(self.mode(), 'göndərildi'), dict(message=evaluation['message'], worker=worker['name'])
+                if evaluation.get('tool'):
+                    final['tool'] = evaluation['tool']
                 if peer and peer['applies'] is False and status in ('göndərildi', 'qaralama'):
                     # Held, not sent: a person decides whether the colleague was right.
                     status, final['flag'] = 'qaralama', dict(by=peer['worker']['name'], reason=peer['reason'])
@@ -830,7 +873,7 @@ class Agency:
         unreviewed = service == 'soz' and peer is not None and peer['applies'] is None
         kind = ('flag' if final.get('flag') else 'shadow' if status == 'kölgə' else
                 'audit' if status == 'göndərildi' and (unreviewed or self.rng.random() < self._audit_rate(worker)) else None)
-        if kind:
+        if kind and not evaluation.get('tool'):
             self.db.execute('INSERT OR IGNORE INTO reviews(job_id, kind, created_at) VALUES (?, ?, ?)',
                             (job['id'], kind, now()))
 
@@ -927,6 +970,9 @@ class Agency:
                                                    "WHERE service='tender' ORDER BY created_at") if seen(d['created_at'])]
             out['reviews'] = self._reviews(seen)
             out['regression'] = self._regression_report(seen)
+            if not self.replay:
+                out['operations'] = self.operation_state()
+                out['company_profile'] = self.setting('company_profile', {})
             return out
 
     def _reviews(self, seen):
@@ -1010,7 +1056,7 @@ class Agency:
         with self.lock, self.db:
             worker = self._one('SELECT * FROM workers WHERE id=?', (worker_id,))
             if not worker or worker['service'] != 'soz' or worker['status'] not in wf.STAFFED:
-                raise ValueError('Yalnız Söz Agentliyində işləyən işçinin təlimatı dəyişdirilə bilər.')
+                raise ValueError('Yalnız Mesaj Agentliyində işləyən işçinin təlimatı dəyişdirilə bilər.')
             drifted = self.setting('drift', {})
             if worker_id in drifted:
                 raise ValueError(f"{wf.genitive(worker['name'])} təlimatı artıq dəyişdirilib.")

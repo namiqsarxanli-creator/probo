@@ -1,4 +1,4 @@
-"""Söz Agentliyi: customer replies that can only say what the policy says.
+"""Mesaj Agentliyi: customer replies that can only say what the policy says.
 
 The agent never writes the message the customer receives. It returns
 sentences, each paired with the policy wording it rests on; the guard checks

@@ -17,7 +17,7 @@ from urllib.request import Request, urlopen
 from agency import support
 
 LOG = logging.getLogger(__name__)
-WELCOME = ('Salam! Bu, nümunə mağaza «Bazarım» üçün Söz Agentliyinin demo dəstək botudur.\n\n'
+WELCOME = ('Salam! Bu, nümunə mağaza «Bazarım» üçün Mesaj Agentliyinin demo dəstək botudur.\n\n'
            'Sualınızı yazın — cavab yalnız mağazanın yazılı qaydalarına əsaslanır və hər cümlə '
            'göndərilməzdən əvvəl o qaydalarla yoxlanılır. Qaydalarda cavabı olmayan suallar əməkdaşa ötürülür.\n\n'
            'Qeyd: mesajınız cavab hazırlamaq üçün AI provayderinə göndərilir. Telefon, kart, e-poçt və FİN '

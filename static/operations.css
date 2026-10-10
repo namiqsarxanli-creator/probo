@@ -1,0 +1,120 @@
+/* Sifariş və stok — deep navy with blue glows and thin orbit lines, a 3D stock dispenser in
+   the hero (ops3d.js), and dark product-style cards with big figures. Scoped to #tab-operations;
+   the order list, form and journal are still filled by capabilities.js. */
+@font-face { font-family: 'Inter Tight'; font-weight: 400 600; font-display: swap;
+  src: url(/fonts/inter-tight-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: 'Inter Tight'; font-weight: 400 600; font-display: swap;
+  src: url(/fonts/inter-tight-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+
+#tab-operations {
+  --bg: #0a1236; --card: #18203a; --card2: #1f2846; --ink: #ffffff; --muted: #a9b3cf; --line: #2c365a; --blue: #3f7cff;
+  --s: #0fd65c; --m: #2a62ff; --l: #ff8c0a; --panel: #18203a; --panel2: #1f2846; --ok: #4ade80; --ok-bg: #12301f; --warn: #f5a83a; --warn-bg: #3a2a10;
+  --sans: 'Inter Tight', 'Segoe UI', system-ui, sans-serif;
+  color: var(--ink); font-family: var(--sans);
+}
+#tab-operations.on { display: block; margin: -20px -24px -60px; padding-bottom: 100px; overflow-x: clip; position: relative;
+  background:
+    radial-gradient(900px 600px at 0% 0%, rgba(50,110,255,.55), transparent 60%),
+    radial-gradient(700px 700px at 100% 55%, rgba(60,100,255,.45), transparent 60%),
+    radial-gradient(600px 500px at 10% 100%, rgba(40,190,255,.25), transparent 60%),
+    var(--bg); }
+#tab-operations.on::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 8%, transparent 0 299px, rgba(255,255,255,.07) 300px, transparent 301px),
+    radial-gradient(circle at 20% 8%, transparent 0 599px, rgba(255,255,255,.06) 600px, transparent 601px),
+    radial-gradient(circle at 75% 40%, transparent 0 449px, rgba(255,255,255,.06) 450px, transparent 451px),
+    radial-gradient(circle at 75% 40%, transparent 0 849px, rgba(255,255,255,.05) 850px, transparent 851px),
+    radial-gradient(circle at 50% 100%, transparent 0 699px, rgba(255,255,255,.05) 700px, transparent 701px); }
+html:has(#tab-operations.on), body:has(#tab-operations.on) { background: #0a1236; }
+body:has(#tab-operations.on) .top { background: rgba(10,18,54,.75); backdrop-filter: blur(12px); border-bottom-color: rgba(255,255,255,.08); color: #fff; }
+body:has(#tab-operations.on) .top .brand strong { color: #fff; }
+body:has(#tab-operations.on) .top .brand small, body:has(#tab-operations.on) .status { color: #a9b3cf; }
+body:has(#tab-operations.on) #tabs button { color: #c9d1ea; }
+body:has(#tab-operations.on) #tabs button.on { background: #fff; color: #0a1236; border-color: #fff; }
+body:has(#tab-operations.on) #big { background: #fff; color: #0a1236; border-color: #fff; }
+
+#tab-operations > * { position: relative; }
+.op-kicker { font: 400 15px var(--sans); color: var(--muted); margin: 0 0 12px; }
+
+/* ── hero ─────────────────────────────────────────────── */
+.op-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: 20px; min-height: min(86vh, 780px);
+  padding: 40px max(24px, 9vw) 40px; }
+.op-test { display: inline-block; font: 500 11px var(--sans); letter-spacing: .08em; color: #ffd28a; border: 1px solid rgba(255,210,138,.4);
+  border-radius: 99px; padding: 6px 12px; margin-bottom: 26px; }
+.op-hero h1 { font: 600 clamp(42px, 5.2vw, 80px)/1.04 var(--sans); letter-spacing: -.03em; margin: 0 0 26px; animation: op-in .9s both; }
+.op-lead { font: 400 19px/1.6 var(--sans); color: #dfe5f7; max-width: 520px; margin: 0 0 34px; animation: op-in .9s .15s both; }
+.op-actions { display: flex; align-items: center; gap: 26px; flex-wrap: wrap; animation: op-in .9s .3s both; }
+#tab-operations .op-btn { background: #fff; color: #0a1236; border: 0; border-radius: 4px; padding: 15px 24px; font: 600 15px var(--sans); cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease; }
+#tab-operations .op-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(120,160,255,.8); }
+#tab-operations .op-link { background: none; border: 0; color: #fff; font: 600 15px var(--sans); cursor: pointer; padding: 6px 0; }
+.op-link span { margin-left: 6px; display: inline-block; transition: transform .2s ease; }
+.op-link:hover span { transform: translateX(4px); }
+#tab-operations button:focus-visible, #tab-operations input:focus-visible, #tab-operations select:focus-visible { outline: 2px solid #8fb2ff; outline-offset: 3px; }
+.op-stage { position: relative; height: min(76vh, 680px); }
+#op-machine { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.op-stage.no-webgl::before { content: ''; position: absolute; inset: 15% 25%; border-radius: 28px; background: linear-gradient(180deg, #3550c8, #1a2466); }
+@keyframes op-in { from { opacity: 0; transform: translateY(16px); } }
+
+/* ── intro row ────────────────────────────────────────── */
+.op-intro { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; padding: 80px max(24px, 9vw) 50px; align-items: start; }
+.op-intro h2 { font: 600 clamp(30px, 3.2vw, 46px)/1.15 var(--sans); letter-spacing: -.02em; margin: 0; display: block; }
+.op-intro > p { font: 400 16px/1.9 var(--sans); color: #dfe5f7; margin: 34px 0 0; }
+
+/* ── size cards ───────────────────────────────────────── */
+.op-sizes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 0 max(24px, 9vw); }
+.op-size { background: var(--card); border-radius: 16px; padding: 40px 34px 34px; text-align: center; transition: transform .3s ease, box-shadow .3s ease; }
+.op-size:hover { transform: translateY(-6px); box-shadow: 0 30px 60px -30px rgba(63,124,255,.6); }
+.op-ball { display: block; width: 92px; height: 92px; margin: 0 auto 26px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #fff 0 6%, var(--c) 30%, color-mix(in srgb, var(--c) 55%, #000) 100%);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--c) 45%, transparent), inset -8px -10px 20px rgba(0,0,0,.25);
+  animation: op-bob 4s ease-in-out infinite; }
+.op-ball[data-size="S"] { --c: var(--s); } .op-ball[data-size="M"] { --c: var(--m); animation-delay: -1.3s; } .op-ball[data-size="L"] { --c: var(--l); animation-delay: -2.6s; }
+.op-size.out .op-ball { --c: #4a5270; box-shadow: inset -8px -10px 20px rgba(0,0,0,.35); opacity: .6; animation: none; }
+@keyframes op-bob { 50% { transform: translateY(-10px); } }
+.op-size small { font: 500 12px var(--sans); color: var(--muted); letter-spacing: .04em; }
+.op-size h3 { font: 600 30px/1.2 var(--sans); margin: 6px 0 12px; }
+.op-size p { font: 400 14px/1.6 var(--sans); color: #c9d1ea; margin: 0 0 26px; min-height: 2.2em; }
+.op-figs { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); padding-top: 22px; }
+.op-figs > div + div { border-left: 1px solid var(--line); }
+.op-figs small { display: block; font-size: 11px; margin-bottom: 6px; }
+.op-figs b { font: 600 34px/1 var(--sans); }
+.op-figs b.op-state { font-size: 22px; line-height: 34px; color: var(--ok); }
+.op-size.out .op-figs b.op-state { color: #ff7a6b; }
+.op-empty { grid-column: 1 / -1; background: var(--card); border-radius: 16px; padding: 40px; text-align: center; color: var(--muted); font-size: 16px; }
+
+/* ── totals ───────────────────────────────────────────── */
+.op-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 100px max(24px, 9vw) 90px; text-align: center; }
+.op-stats b { display: block; font: 700 clamp(48px, 5vw, 72px)/1 var(--sans); letter-spacing: -.02em; }
+.op-stats span { display: block; margin-top: 14px; font-size: 15px; color: #dfe5f7; }
+.op-stats:empty { display: none; }
+
+/* ── orders + exchange ────────────────────────────────── */
+.op-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; padding: 0 max(24px, 9vw); }
+.op-card { background: var(--card); border-radius: 16px; padding: 34px; scroll-margin-top: 90px; }
+.op-gap { margin-top: 30px; }
+#tab-operations .tool-note { border: 1px solid var(--line); border-left: 3px solid var(--blue); border-radius: 10px; background: var(--card2); padding: 16px 18px; margin: 0 0 12px; }
+#tab-operations .tool-note b { font: 600 16px var(--sans); }
+#tab-operations .tool-note p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+#tab-operations #exchange-form label { display: block; margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+#tab-operations #exchange-form input, #tab-operations #exchange-form select { display: block; width: 100%; margin-top: 8px; background: var(--card2); color: #fff;
+  border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; font: 500 15px var(--sans); }
+#tab-operations button.primary { background: #fff; color: #0a1236; border: 0; border-radius: 4px; padding: 13px 20px; font: 600 14px var(--sans); cursor: pointer; margin-top: 6px; }
+#tab-operations #operation-exchanges button, #tab-operations #exchange-preview button:not(.primary) { background: transparent; color: #fff; border: 1px solid #6c7697;
+  border-radius: 4px; padding: 9px 14px; cursor: pointer; margin-left: 8px; }
+#tab-operations #exchange-preview { margin-top: 16px; color: #dfe5f7; font-size: 14px; line-height: 1.6; }
+#tab-operations .banner.warn { background: var(--warn-bg); color: #ffd28a; border-radius: 8px; padding: 10px 12px; font-weight: 600; }
+#tab-operations #operation-exchanges p { margin: 0 0 10px; color: #dfe5f7; font-size: 14px; }
+
+@media (max-width: 900px) {
+  .op-hero { grid-template-columns: 1fr; padding-top: 30px; min-height: 0; }
+  .op-stage { height: 420px; order: -1; }
+  .op-intro, .op-grid { grid-template-columns: 1fr; gap: 20px; }
+  .op-intro > p { margin-top: 0; }
+  .op-sizes { grid-template-columns: 1fr; }
+  .op-stats { grid-template-columns: 1fr; gap: 40px; padding: 70px 24px; }
+  .op-card { padding: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .op-ball, .op-hero h1, .op-lead, .op-actions { animation: none; } .op-size, .op-btn { transition: none; } }

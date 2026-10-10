@@ -1,0 +1,175 @@
+/* Mesaj Agentliyi — a bright, playful skin over the same markup the panel script fills.
+   White page, heavy display type, a neon marker behind the key word, folder-shaped cards
+   and round stickers. Scoped to #tab-soz so the other sections keep their own look. */
+@font-face { font-family: 'Unbounded'; font-weight: 400 900; font-display: swap;
+  src: url(/fonts/unbounded-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: 'Unbounded'; font-weight: 400 900; font-display: swap;
+  src: url(/fonts/unbounded-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+
+#tab-soz {
+  --neon: #00FF06; --ink: #212121; --blue: #2929E2; --pink: #EE8CF0; --orange: #FF9A1F;
+  --paper: #FFFFFF; --soft: #F3F3F1; --line: #212121; --mute: #5c5c5c;
+  --display: 'Unbounded', 'Segoe UI', system-ui, sans-serif;
+  color: var(--ink);
+}
+#tab-soz.on { display: block; margin: -20px -24px -60px; padding: 0 24px 96px; background: var(--paper);
+  overflow-x: clip; /* the tilted band's corners must not widen the page */ }
+html:has(#tab-soz.on), body:has(#tab-soz.on) { background: #FFFFFF; }
+body:has(#tab-soz.on) .top { background: rgba(255,255,255,.94); border-bottom-color: #e6e6e6; color: var(--ink); }
+body:has(#tab-soz.on) .top .brand small, body:has(#tab-soz.on) .status { color: #5c5c5c; }
+body:has(#tab-soz.on) #tabs button { color: #5c5c5c; }
+body:has(#tab-soz.on) #tabs button.on { background: #212121; color: #fff; border-color: #212121; }
+body:has(#tab-soz.on) .top .brand strong { color: #212121; }
+body:has(#tab-soz.on) #big { color: #212121; border-color: #cfcfcf; }
+
+/* ── hero ─────────────────────────────────────────────── */
+.soz-hero { position: relative; padding: 56px 0 28px; }
+.soz-eyebrow { display: inline-block; font: 600 12px/1 var(--display); letter-spacing: .08em; border: 2px solid var(--ink);
+  border-radius: 99px; padding: 8px 14px; }
+.soz-hero h1 { font: 900 clamp(44px, 8.4vw, 128px)/.98 var(--display); letter-spacing: -.035em; margin: 22px 0 18px; max-width: 13ch; }
+.soz-hero h1 mark { color: var(--ink); background: none; position: relative; white-space: nowrap; z-index: 0; }
+.soz-hero h1 mark::before { content: ''; position: absolute; z-index: -1; left: -.12em; right: -.12em; top: .2em; bottom: .02em;
+  background: var(--neon); border-radius: .35em .55em .4em .6em; transform: rotate(-2deg); }
+.soz-lead { font-size: 19px; line-height: 1.5; max-width: 640px; color: #333; margin: 0; }
+.sticker { position: absolute; filter: drop-shadow(3px 4px 0 rgba(33,33,33,.9)); animation: bob 5s ease-in-out infinite; }
+.s-smile { width: 92px; top: 64px; right: 6%; }
+.s-para { width: 70px; top: 34px; right: 30%; animation-delay: -1.6s; }
+.s-bubble { width: 86px; top: 420px; right: 12%; animation-delay: -3s; transform: rotate(-12deg); }
+@keyframes bob { 0%,100% { translate: 0 0; } 50% { translate: 0 -10px; } }
+.soz-pills { display: inline-flex; gap: 4px; margin-top: 30px; background: var(--ink); border-radius: 14px; padding: 5px; flex-wrap: wrap; }
+.soz-pills button { background: none; border: 0; color: #fff; padding: 9px 14px; border-radius: 10px; cursor: pointer; font-size: 14px; }
+.soz-pills button:hover, .soz-pills button:focus-visible { background: #3a3a3a; outline: none; }
+
+/* ── stats ────────────────────────────────────────────── */
+#tab-soz .kpis { gap: 14px; margin: 18px 0 8px; }
+#tab-soz .kpi { background: var(--soft); border: 0; border-radius: 22px; padding: 18px 20px; }
+#tab-soz .kpi span { color: var(--mute); font-size: 12px; letter-spacing: .02em; text-transform: none; }
+#tab-soz .kpi b { font: 800 40px/1.05 var(--display); margin-top: 8px; color: var(--ink); }
+#tab-soz .kpi.green { background: var(--neon); }
+#tab-soz .kpi.green span, #tab-soz .kpi.green b { color: var(--ink); }
+#tab-soz .kpi.red { background: var(--ink); }
+#tab-soz .kpi.red span { color: #bdbdbd; }
+#tab-soz .kpi.red b { color: var(--neon); }
+
+/* ── ticker band ──────────────────────────────────────── */
+.soz-ticker { margin: 44px -24px; border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink);
+  transform: rotate(-2deg); overflow: hidden; background: var(--paper); }
+.soz-ticker div { display: flex; align-items: center; gap: 26px; width: max-content; padding: 14px 0; animation: run 28s linear infinite; }
+.soz-ticker span { font: 800 clamp(26px, 4vw, 54px)/1 var(--display); letter-spacing: -.02em; white-space: nowrap; }
+.soz-ticker i { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); flex: none; position: relative; }
+.soz-ticker i::after { content: ''; position: absolute; left: 7px; right: 7px; top: 13px; height: 5px; border: 2.5px solid #fff; border-top: 0; border-radius: 0 0 8px 8px; }
+@keyframes run { to { transform: translateX(-50%); } }
+
+/* ── compose: a sentence you finish ───────────────────── */
+.soz-compose { max-width: 1100px; margin: 0 auto 64px; }
+.soz-h { font: 900 clamp(34px, 5vw, 72px)/1.05 var(--display); letter-spacing: -.03em; margin: 0 0 10px; }
+.soz-h.small { font-size: clamp(22px, 3vw, 40px); margin-top: 18px; }
+.madlib { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.madlib span { font: 900 clamp(34px, 5vw, 72px)/1.05 var(--display); letter-spacing: -.03em; }
+#tab-soz .madlib textarea { flex: 1 1 340px; background: none; border: 0; border-bottom: 2px solid #bdbdbd; border-radius: 0;
+  font: 600 clamp(17px, 1.8vw, 24px)/1.4 var(--display); color: var(--ink); padding: 6px 2px 10px; resize: none;
+  min-height: 3.2em; field-sizing: content; /* grows with the question instead of clipping it */ }
+#tab-soz .madlib textarea:focus { border-bottom-color: var(--ink); outline: none; }
+#tab-soz .madlib textarea::placeholder { color: #a8a8a8; }
+.soz-go { display: block; width: 100%; margin-top: 30px; background: var(--neon); color: var(--ink); border: 0; border-radius: 34px;
+  font: 900 clamp(40px, 7vw, 104px)/1 var(--display); letter-spacing: -.03em; padding: 30px 20px 36px; cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease; }
+.soz-go:hover { transform: translateY(-3px); box-shadow: 0 8px 0 var(--ink); }
+.soz-go:active { transform: translateY(1px); box-shadow: none; }
+.soz-go:disabled { opacity: .6; cursor: wait; transform: none; box-shadow: none; }
+.soz-compose-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 18px; color: var(--mute); }
+.soz-ghost { background: none; border: 2px solid var(--ink); color: var(--ink); border-radius: 99px; padding: 9px 18px; cursor: pointer; font-weight: 600; }
+.soz-ghost:hover { background: var(--ink); color: #fff; }
+#tab-soz #telegram-link a { color: var(--blue); font-weight: 600; }
+#tab-soz #telegram-qr { float: none; margin: 0 0 0 auto; }
+
+/* ── layout below ─────────────────────────────────────── */
+.soz-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 34px; align-items: start; }
+.soz-col { display: flex; flex-direction: column; gap: 46px; min-width: 0; }
+.soz-title { font: 900 clamp(30px, 3.6vw, 52px)/1 var(--display); letter-spacing: -.03em; margin: 0 0 22px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+.soz-title small { font: 500 13px/1.3 'Segoe UI', system-ui, sans-serif; color: var(--mute); letter-spacing: 0; }
+.soz-feed { display: flex; flex-direction: column; gap: 40px; padding-top: 18px; }
+
+/* Folder card: a tab rises from the top-left corner in the card's own colour. */
+.folder, #tab-soz .ticket { position: relative; border-radius: 0 26px 26px 26px; padding: 26px 26px 24px; }
+.folder::before, #tab-soz .ticket::before { content: ''; position: absolute; left: 0; top: -20px; width: 40%; height: 22px;
+  background: inherit; border-radius: 18px 18px 0 0; clip-path: polygon(0 0, 82% 0, 100% 100%, 0 100%); }
+.folder h3 { font: 800 clamp(24px, 2.4vw, 34px)/1.1 var(--display); letter-spacing: -.02em; margin: 0 0 10px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.folder h3 small { font: 500 12px/1 'Segoe UI', system-ui, sans-serif; opacity: .75; }
+.folder p { margin: 0 0 14px; line-height: 1.5; }
+.folder.blue { background: var(--blue); color: #fff; }
+.folder.paper { background: var(--soft); }
+.folder.blue textarea { background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.45); color: #fff; border-radius: 14px; font-size: 15px; }
+.folder.blue textarea::placeholder { color: rgba(255,255,255,.65); }
+.folder.blue textarea:focus { border-color: #fff; outline: none; }
+.soz-white { margin-top: 12px; background: #fff; color: var(--blue); border: 0; border-radius: 99px; padding: 11px 20px; font-weight: 700; cursor: pointer; }
+.soz-white:hover { background: var(--neon); color: var(--ink); }
+
+/* Human check result, inside the blue card */
+#tab-soz .banner { border-radius: 14px; font-weight: 700; }
+#tab-soz .banner.ok { background: var(--neon); color: var(--ink); }
+#tab-soz .banner.bad { background: #fff; color: #c1121f; }
+#tab-soz .folder.blue .verdict { border: 0; border-radius: 12px; color: var(--ink); }
+#tab-soz .verdict.ok { background: #d9ffda; }
+#tab-soz .verdict.bad { background: #ffe1e3; }
+#tab-soz .verdict.neutral { background: rgba(255,255,255,.85); color: var(--mute); }
+#tab-soz .verdict small { color: #444; }
+#tab-soz .verdict .why { color: #b00020; font-weight: 600; }
+
+/* Tickets — colour says what happened */
+#tab-soz .ticket { cursor: pointer; border: 0; transition: transform .15s ease; }
+#tab-soz .ticket:hover { transform: translateY(-2px); }
+#tab-soz .ticket.sel { outline: 3px solid var(--ink); outline-offset: 4px; }
+#tab-soz .ticket.st-sent { background: var(--neon); }
+#tab-soz .ticket.st-human { background: var(--blue); color: #fff; }
+#tab-soz .ticket.st-held { background: var(--pink); }
+#tab-soz .ticket.st-wait { background: var(--soft); }
+#tab-soz .ticket .msg { font: 700 clamp(17px, 1.6vw, 22px)/1.25 var(--display); letter-spacing: -.01em; }
+#tab-soz .ticket .src { color: inherit; opacity: .7; font-size: 12px; margin-top: 6px; }
+#tab-soz .ticket .badge { background: var(--ink); color: #fff; border: 0; font-weight: 600; padding: 4px 11px; }
+#tab-soz .ticket.st-human .badge { background: #fff; color: var(--blue); }
+#tab-soz .ticket .attempt { border-left: 3px solid rgba(33,33,33,.35); }
+#tab-soz .ticket.st-human .attempt { border-left-color: rgba(255,255,255,.5); }
+#tab-soz .ticket .attempt.blocked { border-left-color: #c1121f; }
+#tab-soz .ticket .attempt .who { color: inherit; opacity: .8; }
+#tab-soz .ticket .attempt .why { color: #b00020; font-weight: 600; }
+#tab-soz .ticket.st-human .attempt .why { color: #ffd1d6; }
+#tab-soz .ticket .reply { background: #fff; color: var(--ink); border: 0; border-radius: 14px; font-size: 14px; }
+#tab-soz .ticket .reply.handoff { background: rgba(255,255,255,.92); }
+#tab-soz .ticket .approve { background: #212121; color: #fff; border: 0; border-radius: 99px; }
+/* Other card actions (e.g. the decision path) as white pills that read on every card colour. */
+#tab-soz .ticket button:not(.approve) { margin-top: 12px; background: #fff; color: #212121; border: 2px solid #212121;
+  border-radius: 99px; padding: 7px 16px; font-weight: 700; cursor: pointer; }
+#tab-soz .ticket button:not(.approve):hover { background: #212121; color: #fff; }
+#tab-soz .empty { color: var(--mute); font-size: 15px; }
+
+/* Rules document */
+#tab-soz .doc { max-height: 70vh; font-size: 14px; }
+#tab-soz .doc .cat { font: 800 13px/1 var(--display); color: var(--ink); letter-spacing: .02em; margin: 18px 0 6px; }
+#tab-soz .doc .clause { border-radius: 10px; color: #2b2b2b; }
+#tab-soz .doc .clause i { color: #8a8a8a; }
+#tab-soz .doc .clause.ok { background: var(--neon); border-color: transparent; color: var(--ink); }
+#tab-soz .doc .clause.bad { background: #ffe1e3; border-color: transparent; }
+
+@media (max-width: 1000px) {
+  .soz-grid { grid-template-columns: 1fr; }
+  .sticker { display: none; }
+  #tab-soz .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  #tab-soz.on { padding: 0 16px 72px; margin: -20px -24px -60px; }
+  #tab-soz .kpi b { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sticker, .soz-ticker div { animation: none; }
+  .soz-go, #tab-soz .ticket { transition: none; }
+}
+
+/* Seven tabs do not fit a phone: the row scrolls sideways instead of widening the page. */
+@media (max-width: 760px) {
+  .top { flex-wrap: wrap; }
+  #tabs { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+  #tabs button { flex: none; }
+}

@@ -1,0 +1,141 @@
+/* Tender — Componine-style chapters added below the forest hero: a darkened fresco under slowly
+   turning gold compass lines, an embossed title, ornate wooden frames around the work area, an
+   olive "SÜBUTLU ⊛ QƏRAR" band with a numbered list, and a framed problem / solution picture. */
+@font-face { font-family: 'Marcellus'; font-weight: 400; font-display: swap;
+  src: url(/fonts/marcellus-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: 'Marcellus'; font-weight: 400; font-display: swap;
+  src: url(/fonts/marcellus-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20C0; }
+
+#tab-tender { --cp-dark: #0e0a08; --cp-cream: #f1efea; --cp-gold: #c9a35a; --cp-olive: #3b3b2d; --cp-paper: #efe7d6;
+  --cp-serif: 'Marcellus', 'Trajan Pro', Georgia, serif; }
+
+/* ── painting band ────────────────────────────────────── */
+.cp-hero { position: relative; overflow: hidden; background: var(--cp-dark); color: #f4ead6; min-height: min(92vh, 860px);
+  display: flex; flex-direction: column; justify-content: flex-end; isolation: isolate; }
+.cp-paint { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 43% 50%; z-index: -2;
+  animation: cp-drift 30s ease-in-out infinite alternate; }
+.cp-hero::before { content: ''; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(rgba(0,0,0,.35) 1px, transparent 1.4px) 0 0 / 4px 4px,
+    linear-gradient(180deg, rgba(14,10,8,.55) 0%, rgba(14,10,8,0) 30%, rgba(14,10,8,.15) 60%, rgba(14,10,8,.95) 100%); }
+.cp-rose { position: absolute; left: 50%; top: 56%; width: min(1500px, 140vw); aspect-ratio: 1; translate: -50% -50%; z-index: -1;
+  color: rgba(214,176,98,.55); animation: cp-turn 120s linear infinite; pointer-events: none; }
+.cp-rose circle:first-child { animation: cp-pulse 4s ease-in-out infinite; transform-origin: center; }
+@keyframes cp-drift { from { transform: scale(1.02) translateX(-1%); } to { transform: scale(1.08) translateX(1%); } }
+@keyframes cp-turn { to { rotate: 360deg; } }
+@keyframes cp-pulse { 50% { opacity: .3; } }
+.cp-hero-copy { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 40px; align-items: end;
+  padding: 0 max(24px, 15vw) 40px; }
+.cp-pill { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 8px; font: 500 12px system-ui, sans-serif;
+  border: 1px solid rgba(244,234,214,.45); border-radius: 99px; padding: 6px 12px; background: rgba(14,10,8,.4); backdrop-filter: blur(6px); }
+.cp-pill i { width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff2c4, #d9a441); box-shadow: 0 0 8px #e9b44f; }
+.cp-hero h2 { margin: 0; display: block; font: 400 clamp(32px, 4.2vw, 64px)/1.06 var(--cp-serif); text-transform: uppercase; letter-spacing: .01em; color: #fbf3e2;
+  text-shadow: 0 2px 24px rgba(0,0,0,.6); }
+.cp-hero-side p { margin: 0 0 14px; font: 400 14px/1.55 system-ui, sans-serif; color: #b9ad97; max-width: 340px; }
+.cp-marquee { overflow: hidden; border-top: 1px solid rgba(244,234,214,.12); padding: 22px 0; }
+.cp-marquee > div { display: flex; width: max-content; animation: cp-roll 40s linear infinite; }
+.cp-marquee span { font: 400 26px var(--cp-serif); text-transform: uppercase; color: #8d826f; padding: 0 34px; white-space: nowrap; }
+.cp-marquee span::before { content: '⊛'; margin-right: 34px; color: var(--cp-gold); font-size: 18px; vertical-align: 3px; }
+@keyframes cp-roll { to { transform: translateX(-50%); } }
+
+/* ── embossed title over the work desk ────────────────── */
+.cp-emboss { text-align: center; padding: 30px 16px 6px; overflow: hidden; }
+.cp-emboss span { display: inline-block; font: 400 clamp(54px, 10.5vw, 170px)/1 var(--cp-serif); letter-spacing: .02em; color: #e7e2d6;
+  text-shadow: -1px -1px 0 rgba(255,255,255,.9), 2px 2px 3px rgba(80,60,30,.28), 0 0 1px rgba(80,60,30,.25); white-space: nowrap; }
+
+/* the work area: cream paper ruled into columns, panels hung in dark wooden frames */
+#tab-tender > .grid { background-image: repeating-linear-gradient(90deg, transparent 0 calc(8.33% - 1px), rgba(120,100,70,.12) calc(8.33% - 1px) 8.33%); }
+#tab-tender .tender-heading span, #tab-tender .tender-heading p { font-family: var(--cp-serif); }
+#tab-tender .card { position: relative; border: 0; border-radius: 2px; background: #fbf8f1;
+  box-shadow: 0 0 0 10px #3a2618, 0 0 0 12px #6b4a2c, 0 0 0 14px #24160d, 0 22px 40px 8px rgba(40,25,10,.35), inset 0 0 0 1px #e2d8c4; margin: 14px; }
+#tab-tender .card h2 { font: 400 22px var(--cp-serif); text-transform: uppercase; letter-spacing: .02em; }
+#tab-tender .kpis { box-shadow: inset 0 0 0 1px rgba(120,100,70,.25); }
+#tab-tender .kpi b { font-family: var(--cp-serif) !important; }
+
+/* ── olive band and the dark list ─────────────────────── */
+.cp-band { display: flex; align-items: center; justify-content: center; gap: clamp(16px, 3vw, 40px); background: var(--cp-olive); color: #f1ead9;
+  padding: 26px 16px; margin-top: 70px; overflow: hidden; }
+.cp-band span { font: 400 clamp(46px, 8vw, 128px)/1 var(--cp-serif); letter-spacing: .01em; }
+.cp-band svg { width: clamp(46px, 7vw, 108px); color: #e98a2f; flex: none; animation: cp-turn 18s linear infinite; }
+.cp-dark { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 2fr); gap: 60px; align-items: start; background: var(--cp-dark); color: #efe7d6;
+  padding: 90px max(24px, 15vw) 110px; position: relative; overflow: hidden; }
+.cp-dark::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 45%; pointer-events: none; opacity: .45;
+  background: radial-gradient(rgba(214,166,80,.8) 1.2px, transparent 1.8px) 0 0 / 11px 11px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 100%, #000, transparent 70%); mask-image: radial-gradient(ellipse 60% 70% at 50% 100%, #000, transparent 70%); }
+.cp-scholar { margin: 0; position: relative; z-index: 1; }
+.cp-scholar img { width: 100%; display: block; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 30px 60px rgba(0,0,0,.6); }
+.cp-scholar figcaption { margin-top: 10px; font: 400 10px/1.4 system-ui, sans-serif; color: #6f6656; }
+.cp-list { position: relative; z-index: 1; }
+.cp-label { font: 600 11px system-ui, sans-serif; letter-spacing: .06em; margin: 0 0 22px; padding-left: 12px; border-left: 2px solid #e98a2f; }
+.cp-list ol { list-style: none; margin: 0; padding: 0; }
+.cp-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; cursor: default; }
+.cp-list li span { font: 400 clamp(26px, 3.4vw, 50px)/1.32 var(--cp-serif); color: #5f574b; transition: color .35s ease, transform .35s ease; }
+.cp-list li i { font: 400 11px system-ui, sans-serif; font-style: normal; color: #5f574b; padding-top: 12px; }
+.cp-list li:hover span { color: #f4ead6; transform: translateX(10px); }
+.cp-list li:hover i { color: #e98a2f; }
+
+/* ── framed problem / solution picture ────────────────── */
+.cp-frame-wrap { background: var(--cp-dark); padding: 10px max(16px, 3vw) 110px; text-align: center; }
+.cp-frame { display: inline-block; width: min(1500px, 100%); padding: clamp(14px, 1.8vw, 26px);
+  background: linear-gradient(135deg, #5a3d24, #2b1b10 30%, #6e4c2d 50%, #24160d 75%, #4e3520);
+  box-shadow: 0 0 60px rgba(255,220,170,.08), 0 40px 80px rgba(0,0,0,.7), inset 0 0 0 2px #1a0f08, inset 0 0 18px rgba(0,0,0,.8); }
+.cp-mat { position: relative; aspect-ratio: 2.1; overflow: hidden; background: #ece6d8; padding: clamp(18px, 3vw, 46px);
+  box-shadow: inset 0 0 0 1px #cfc5b0, inset 0 0 40px rgba(120,100,60,.25); }
+.cp-mat img { position: absolute; left: 50%; top: 50%; height: 118%; translate: -50% -42%; filter: drop-shadow(0 0 30px rgba(0,0,0,.2));
+  -webkit-mask-image: radial-gradient(ellipse 48% 58% at 50% 46%, #000 55%, transparent 100%); mask-image: radial-gradient(ellipse 48% 58% at 50% 46%, #000 55%, transparent 100%); }
+.cp-scribble, .cp-laser { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cp-scribble { width: 46%; height: 46%; left: 1%; top: 3%; }
+.cp-scribble path { fill: none; stroke: #e8522e; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: cp-draw 5s ease-in-out infinite alternate; }
+.cp-laser { left: 55%; width: 45%; top: 27%; height: 40%; }
+.cp-laser path { fill: none; stroke: #7cff5a; stroke-width: 2; filter: drop-shadow(0 0 4px #7cff5a); stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: cp-draw 2.6s cubic-bezier(.6,0,.2,1) infinite alternate; }
+@keyframes cp-draw { to { stroke-dashoffset: 0; } }
+.cp-tag { position: absolute; top: 56%; font: 400 clamp(16px, 2vw, 30px)/1.1 var(--cp-serif); letter-spacing: .02em; text-align: left; }
+.cp-tag small { display: block; margin-top: 6px; font: 400 12px system-ui, sans-serif; letter-spacing: 0; color: #6f6656; }
+.cp-tag.bad { left: 14%; color: #e8522e; }
+.cp-tag.good { right: 9%; color: #2f6b2a; }
+.cp-credit { display: block; margin-top: 16px; font: 400 10px system-ui, sans-serif; color: #6f6656; }
+
+@media (max-width: 900px) {
+  .cp-hero { min-height: 620px; }
+  .cp-hero-copy { grid-template-columns: 1fr; gap: 18px; padding: 0 20px 26px; }
+  .cp-marquee span { font-size: 18px; padding: 0 18px; }
+  .cp-dark { grid-template-columns: 1fr; gap: 34px; padding: 60px 20px 70px; }
+  .cp-scholar { max-width: 280px; }
+  .cp-mat { aspect-ratio: .9; }
+  .cp-mat img { height: 92%; translate: -50% -44%; }
+  .cp-tag { top: auto; bottom: 6%; font-size: 15px; }
+  .cp-tag.bad { left: 6%; } .cp-tag.good { right: 6%; text-align: right; }
+  .cp-scribble { width: 70%; height: 40%; }
+  .cp-laser { left: 45%; width: 55%; }
+  #tab-tender .card { margin: 14px 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-paint, .cp-rose, .cp-rose circle, .cp-marquee > div, .cp-band svg, .cp-scribble path, .cp-laser path { animation: none; }
+  .cp-scribble path, .cp-laser path { stroke-dashoffset: 0; }
+}
+
+/* ── tender upload: a drop zone for PDF / Word / text files ── */
+#tab-tender .tender-drop { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 130px; margin: 12px 0 4px; padding: 20px; text-align: center; cursor: pointer;
+  border: 2px dashed #b8ab8c; border-radius: 6px; background: #f8f3e7; transition: background .2s ease, border-color .2s ease; }
+#tab-tender .tender-drop input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; padding: 0; }
+#tab-tender .tender-drop b { font: 400 18px var(--cp-serif); text-transform: uppercase; letter-spacing: .02em; color: #3d3222; }
+#tab-tender .tender-drop b::before { content: '⇪'; display: block; font-size: 28px; color: #a47c20; margin-bottom: 4px; }
+#tab-tender .tender-drop small { font-size: 13px; color: #6f6656; }
+#tab-tender .tender-drop.over { background: #efe4c8; border-color: #a47c20; }
+#tab-tender .tender-drop.has-file { background: #e6eedb; border-color: #4f7a3a; border-style: solid; }
+#tab-tender .tender-drop.has-file b::before { content: '✓'; color: #4f7a3a; }
+#tab-tender .tender-drop:focus-within { outline: 3px solid #a47c20; outline-offset: 3px; }
+#tab-tender .tender-or { margin: 8px 0 4px; font-size: 13px; color: #6f6656; text-align: center; }
+
+/* ── header: the same layout as every other section, in Componine's dark brown and gold ── */
+body:has(#tab-tender.on) .top { background: rgba(14,10,8,.88); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(201,163,90,.22); color: #f1e7d2; }
+body:has(#tab-tender.on) .top .brand strong { color: #f4ead6; font-family: 'Marcellus', Georgia, serif; font-size: 17px; letter-spacing: .02em; }
+body:has(#tab-tender.on) .top .brand small, body:has(#tab-tender.on) .status { color: #a99c84; }
+body:has(#tab-tender.on) .top .mark { background: linear-gradient(135deg, #d8b46a, #8a6424); color: #1a120a; }
+body:has(#tab-tender.on) #tabs button { color: #cbbfa6; border-radius: 8px; }
+body:has(#tab-tender.on) #tabs button:hover { color: #f4ead6; }
+body:has(#tab-tender.on) #tabs button.on { background: #f1e6cc; color: #1a120a; border-color: #f1e6cc; }

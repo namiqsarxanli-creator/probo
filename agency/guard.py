@@ -44,12 +44,15 @@ NEGATIVE_WORDS = {fold(w) for w in ('deyil', 'yox', 'yoxdur', 'heç', 'qadağand
 # Vowel harmony matters: back -maz/-mamalı, front -məz/-məməli (ə, not e).
 # "-məməli" is usually followed by a copula ("edilməməlidir"), so it takes no word boundary;
 # neither does the future negative "-məyəcək" ("qaytara bilməyəcəksiniz").
-NEGATIVE_FORM = re.compile(r'[^\W\d_]{2,}(?:m[iuü]r(?:lar|lər)?\b|m[aeə]z\b|m[aeə]m[aeə]li|m[aeə]y[aeə]c[aeə][kqğ])')
+# Personal endings follow the negative stem: bilməzsiniz, qaytarmırsınız, edə bilmərik (ı is folded to i).
+PERSON = r'(?:s[iuü]n[iuü]z|s[iuü]n|[iuü]q|[iuü]k|am|əm|lar|lər|d[iuü]r)?'
+NEGATIVE_FORM = re.compile(r'[^\W\d_]{2,}(?:m[iuü]r' + PERSON + r'\b|m[aeə]z' + PERSON + r'\b|m[aeə]r[iuü][kq]\b|'
+                           r'm[aeə]m[aeə]li|m[aeə]y[aeə]c[aeə][kqğ])')
 # "-mayan" is a prohibition only when the clause ends in a copula, a few words
 # later at most ("qaytarılmayan məhsullar siyahısına daxildir"); as a plain
 # attribute it is not ("uyğun gəlməyən geyim 14 gün ərzində dəyişdirilə bilər").
 NEGATIVE_PREDICATE = re.compile(r'[^\W\d_]{3,}m[aeə]y[aeə]n(?:\s+[^\W\d_]+){0,3}?\s+[^\W\d_]*d[iuü]r\b')
-GUARD_VERSION = 6  # bump whenever a rule changes, so stored verdicts are re-checked
+GUARD_VERSION = 7  # bump whenever a rule changes, so stored verdicts are re-checked
 COURTESY = {fold(w) for w in ('salam', 'hörmətli', 'təşəkkür', 'edirik', 'edirəm', 'sağ', 'olun', 'xahiş',
                               'gününüz', 'xeyir', 'müraciət', 'müraciətiniz', 'üçün', 'və', 'bizə',
                               'yazdığınız', 'olsun', 'xoş', 'günlər', 'arzulayırıq', 'hər', 'zaman',

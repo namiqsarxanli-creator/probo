@@ -12,12 +12,32 @@ single unlucky task never costs anyone their job.
 import math
 from collections import Counter
 
-# Groq public price list (console.groq.com/docs/models), checked 2026-10-06.
-# USD per million tokens. Availability for a given key is checked at runtime.
+# Workers come from several providers, each with its own rate limits: when one
+# provider's free quota is spent, colleagues hired from another keep working.
+# Salary is always the provider's paid-tier list price in USD per million tokens,
+# even where this key runs on a free tier, so cost comparisons stay honest.
+#   Groq:       console.groq.com/docs/models, checked 2026-10-06
+#   Gemini:     ai.google.dev/gemini-api/docs/pricing, checked 2026-10-08
+#   OpenRouter: openrouter.ai/api/v1/models (paid variant), checked 2026-10-08
+# tpm / rpm are this account's per-model limits, kept a little under the published ones.
+# Availability for a given key is checked at runtime.
 MODELS = {
-    'openai/gpt-oss-20b': dict(label='GPT-OSS 20B', input=0.075, output=0.30, effort='low'),
-    'openai/gpt-oss-120b': dict(label='GPT-OSS 120B', input=0.15, output=0.60, effort='low'),
-    'qwen/qwen3.8-27b': dict(label='Qwen 3.8 27B', input=0.80, output=4.00, effort=None),
+    'openai/gpt-oss-20b': dict(label='GPT-OSS 20B', input=0.075, output=0.30, effort='low', provider='groq'),
+    'openai/gpt-oss-120b': dict(label='GPT-OSS 120B', input=0.15, output=0.60, effort='low', provider='groq'),
+    'qwen/qwen3.8-27b': dict(label='Qwen 3.8 27B', input=0.80, output=4.00, effort=None, provider='groq'),
+    'gemini/gemini-2.5-flash-lite': dict(label='Gemini 2.5 Flash-Lite', input=0.10, output=0.40, effort=None,
+                                         provider='gemini', api='gemini-2.5-flash-lite', rpm=12, tpm=200_000, free=True),
+    'gemini/gemini-2.5-flash': dict(label='Gemini 2.5 Flash', input=0.30, output=2.50, effort='low',
+                                    provider='gemini', api='gemini-2.5-flash', rpm=8, tpm=200_000, free=True),
+    # Measured 08.10.2026: 12 s per answer and 50 free requests a day — a slow, part-time colleague.
+    'openrouter/nemotron-3-super': dict(label='Nemotron 3 Super 120B', input=0.085, output=0.40, effort=None,
+                                        provider='openrouter', api='nvidia/nemotron-3-super-120b-a12b:free',
+                                        rpm=10, tpm=100_000, free=True),
+}
+PROVIDERS = {
+    'groq': dict(label='Groq', base=None, key='GROQ_API_KEY'),  # base and key from the existing AI_* settings
+    'gemini': dict(label='Google Gemini', base='https://generativelanguage.googleapis.com/v1beta/openai', key='GEMINI_API_KEY'),
+    'openrouter': dict(label='OpenRouter', base='https://openrouter.ai/api/v1', key='OPENROUTER_API_KEY'),
 }
 PERSONAS = {
     'diqqetli': dict(label='Diqqətli', prompt=(
@@ -68,7 +88,7 @@ def stats(worker_id, attempts, window=POLICY['window']):
     """Judged performance from real work, never from exams."""
     mine = [a for a in attempts if a['worker_id'] == worker_id and not a.get('exam')]
     # Reviewing a colleague is work too, but it is not answering: it stays out of cost per answer.
-    own = [a for a in mine if a['outcome'] != 'peer']
+    own = [a for a in mine if a['outcome'] not in ('peer', 'tool')]
     reviewed = [a for a in mine if a['outcome'] == 'peer']
     judged = [a for a in own if a['outcome'] in ('passed', 'blocked')][-window:]
     blocked = sum(1 for a in judged if a['outcome'] == 'blocked')

@@ -167,3 +167,89 @@ box-shadow:0 10px 30px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:4p
 .event.senior{border-left-color:var(--senior)}.event.senior b{color:var(--senior)}
 @keyframes slide{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.event,.worker .doing i{animation:none}}
+/* Ironhill inspired tender workspace: cream paper, forest ink, engraved landscape. */
+body:has(#tab-tender.on){--bg:#f4eedf;--panel:#fbf7ed;--panel2:#ebe5d6;--line:#cdc8b5;--ink:#293c2b;--muted:#626a57;--accent:#3d5136;--accent-bg:#e1e6d6;--ok:#2d603f;--ok-bg:#e2eadb;--bad:#9d3430;--bad-bg:#f5e2da;--warn:#865916;--warn-bg:#eee3c8;background:var(--bg)}
+
+body:has(#tab-tender.on) main{max-width:1440px;padding:0 28px 80px}
+.tender-hero{position:relative;min-height:435px;background:#243b30;color:#f1e3b0;overflow:hidden;margin:0 -28px;padding:64px 7%;display:flex;align-items:center}
+.tender-landscape{position:absolute;inset:0}.tender-landscape svg{width:100%;height:100%;display:block}.tender-landscape:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#14271cca,transparent 85%)}
+.tender-hero-copy{position:relative;z-index:1}.tender-eyebrow{font-size:10px;letter-spacing:2.2px;color:#e7d5a4}
+.tender-hero h1{font:clamp(40px,5.6vw,76px)/1.02 Georgia,'Times New Roman',serif;letter-spacing:-2px;font-weight:400;margin:20px 0}
+.tender-hero h1 em{font-weight:400}.tender-hero p{font-size:14px;line-height:1.7;color:#e1dfca}
+#tender-start{background:#ecdca7;color:#293c2b;border:0;border-radius:0;padding:13px 20px;margin-top:12px;cursor:pointer;font-weight:600}#tender-start span{margin-left:32px}
+.tender-paper{position:absolute;right:10%;top:70px;width:210px;min-height:285px;background:#f8f3e5;color:#3e5037;transform:rotate(9deg);padding:24px;box-shadow:8px 14px 0 #17271c44,0 15px 30px #13241966;border:1px solid #d5ceba;z-index:1;animation:paper-arrive .8s ease-out both}
+.tender-paper:before{content:'';position:absolute;inset:7px;border:1px solid #dad4c5;pointer-events:none}.tender-paper span{font-size:9px;letter-spacing:1.5px}.tender-paper b{display:block;font:38px/1.04 Georgia,serif;margin:22px 0 14px}.tender-paper i{font-size:10px;font-style:normal}.paper-lines{height:42px;margin-top:15px;background:repeating-linear-gradient(transparent 0 9px,#ded8c8 9px 10px)}.tender-paper strong{display:block;font:30px Georgia,serif;margin-top:12px}.tender-paper small{font-size:8px;letter-spacing:2px}
+.tender-heading{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);margin:32px 0 24px;padding-bottom:22px;gap:20px}.tender-heading>span{font-size:10px;letter-spacing:2px}.tender-heading p{font:29px/1.12 Georgia,serif;margin:0;text-align:right}.tender-heading em{font-weight:400}
+#tab-tender .kpis{gap:0;border:1px solid var(--line);margin-bottom:30px;scroll-margin-top:130px}#tab-tender .kpi{border:0;border-right:1px solid var(--line);border-radius:0;background:transparent;padding:18px}#tab-tender .kpi:last-child{border:0}#tab-tender .kpi b{font:32px Georgia,serif;margin-top:10px}
+#tab-tender>.grid{grid-template-columns:minmax(260px,.85fr) minmax(0,1.65fr);gap:28px}#tab-tender .card{border-radius:0;padding:24px;border:1px solid var(--line);box-shadow:3px 4px 0 #e7e1d3}#tab-tender h2{font:25px/1.15 Georgia,serif;margin-bottom:20px}#tab-tender h2 small{font:12px 'Segoe UI',sans-serif}
+#tab-tender input,#tab-tender textarea{background:#f5f0e5;border-radius:0;padding:12px;border-color:#c9c7b4}#tab-tender button{border-radius:0}#tab-tender button.primary{background:#3d5136;color:#fff8e7}#tab-tender .docrow{padding:15px 0;align-items:flex-start}#tab-tender .docrow button{background:#3d5136;color:#fff8e7;border-color:#3d5136}#tab-tender .empty{color:#626a57}#tab-tender .badge{white-space:normal}#tab-tender .verdict .why{color:#9d3430}#tab-tender button:focus-visible{outline:3px solid #a47c20;outline-offset:3px}#tab-tender .doc{max-height:70vh}#tab-tender .fit-grid{font-size:13px}#tab-tender .fit-grid td,#tab-tender .fit-grid th{padding:12px 8px;overflow-wrap:anywhere}
+@keyframes paper-arrive{from{opacity:0;transform:translateY(18px) rotate(4deg)}to{opacity:1;transform:translateY(0) rotate(9deg)}}
+@media(max-width:1000px){.tender-paper{right:6%;width:180px;min-height:260px}.tender-hero h1{font-size:54px}.tender-hero-copy{max-width:65%}}
+@media(max-width:750px){body:has(#tab-tender.on) main{padding:0 16px 50px}.tender-hero{margin:0 -16px;padding:38px 24px;min-height:350px}.tender-hero-copy{max-width:100%}.tender-hero h1{font-size:48px}.tender-paper{display:none}.tender-heading p{font-size:23px}#tab-tender>.grid{grid-template-columns:1fr}.tender-heading{margin-top:24px}#tab-tender .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#tab-tender .kpi{border-bottom:1px solid var(--line)}#tab-tender .card{padding:20px}.tender-eyebrow{font-size:9px;letter-spacing:1.5px}}
+@media(prefers-reduced-motion:reduce){.tender-paper{animation:none}}
+
+/* Continuous tender scene motion. */
+.tender-landscape svg{width:110%;max-width:none;animation:tender-pan 18s ease-in-out infinite alternate;transform-origin:center}
+.tender-landscape:before{content:'';position:absolute;inset:-30%;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 35% 65%,#e9eddc24,transparent 38%),radial-gradient(ellipse at 75% 45%,#e9eddc20,transparent 40%);animation:tender-mist 12s ease-in-out infinite alternate}
+.tender-paper{animation:tender-float 7s ease-in-out infinite}
+#tender-motion{position:absolute;right:26px;bottom:18px;z-index:3;border:1px solid #d9d7b455;background:#233b2dc9;color:#f2e7c3;padding:8px 12px;font-size:11px;cursor:pointer}
+.motion-paused .tender-landscape svg,.motion-paused .tender-landscape:before,.motion-paused .tender-paper{animation-play-state:paused}
+@keyframes tender-pan{from{transform:translateX(-6%) scale(1.02)}to{transform:translateX(0) scale(1.07)}}
+@keyframes tender-mist{from{transform:translateX(-8%);opacity:.35}to{transform:translateX(8%);opacity:1}}
+@keyframes tender-float{0%,100%{transform:translateY(0) rotate(9deg)}50%{transform:translateY(-14px) rotate(6deg)}}
+@media(prefers-reduced-motion:reduce){.tender-landscape svg,.tender-landscape:before,.tender-paper{animation:none}}
+/* Reference opening: full viewport forest, title, then the actual tender workspace. */
+
+body:has(#tab-tender.on) main{max-width:none;padding:0 0 80px}
+#tab-tender .tender-hero{margin:0;min-height:100svh;height:100svh;padding:0;display:grid;place-items:center;background:#14251c;color:#ffcf36}
+.iron-forest{position:absolute;inset:0;overflow:hidden;pointer-events:none}.iron-forest:after{content:'';position:absolute;inset:0;background:linear-gradient(#0e1a1333,transparent 50%,#0e1a1322)}
+.forest-base{position:absolute;width:100%;height:130%;top:0;left:0;object-fit:cover;object-position:center 15%;transform:scale(1.04);transition:transform .35s ease-out}
+.forest-layer{position:absolute;object-fit:contain;transition:transform .6s ease-out;will-change:transform}
+.forest-left{height:110%;width:75%;left:-29%;top:-35%;transform-origin:0 0}
+.forest-right{height:110%;width:75%;right:-29%;top:-35%;transform-origin:100% 0}
+.forest-fog{position:absolute;width:120%;height:80%;left:-10%;top:5%;background:url('/forest-cloud.png') center/cover no-repeat;opacity:.12;mix-blend-mode:screen;animation:forest-fog-drift 22s ease-in-out infinite alternate}
+.fog-two{top:35%;animation-duration:31s;animation-direction:alternate-reverse;opacity:.09}
+.motion-paused .forest-fog{animation-play-state:paused}
+#tab-tender .tender-hero-copy{max-width:none;width:100%;text-align:center;padding:110px 24px 90px;z-index:2}
+#tab-tender .tender-eyebrow{color:#ffcf36;font-size:12px;letter-spacing:1px;font-weight:700}
+#tab-tender .tender-hero h1{font:clamp(76px,15.5vw,230px)/1 Georgia,serif;letter-spacing:-.06em;margin:5px 0 14px;font-weight:400}
+#tab-tender .tender-hero p{color:#ffcf36;font-weight:700;font-size:12px;letter-spacing:.8px}
+#tab-tender #tender-start{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:3;background:transparent;color:#ffcf36;font-weight:500;font-size:12px;padding:0 10px;border:0;white-space:nowrap}
+#tab-tender #tender-start span{display:block;margin:10px auto 0;font-size:24px;animation:forest-scroll-hint 2s ease-in-out infinite}
+#tab-tender #tender-motion{right:22px;bottom:24px;background:#14261c88;color:#dfd9b5;border-color:#c4b57655;font-size:10px}
+.forest-credit{position:absolute;bottom:28px;left:24px;color:#c4c3a4;font-size:9px;text-decoration:none;z-index:3}
+#tab-tender>.tender-heading,#tab-tender>.kpis,#tab-tender>.grid{max-width:1384px;margin-left:auto;margin-right:auto;width:calc(100% - 56px)}
+#tab-tender>.tender-heading{padding-top:55px;padding-bottom:32px;margin-top:0;scroll-margin-top:150px}
+#tab-tender .tender-heading p{font-size:clamp(24px,3vw,40px)}
+@keyframes forest-fog-drift{from{transform:translate3d(-5%,0,0) scale(1.05)}to{transform:translate3d(6%,-4%,0) scale(1.15)}}
+@keyframes forest-scroll-hint{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+@media(max-width:750px){.forest-base{width:170%;left:-35%;height:130%}.forest-left{left:-48%;width:100%;height:90%}.forest-right{right:-48%;width:100%;height:90%}#tab-tender .tender-hero-copy{padding-top:160px}#tab-tender .tender-hero h1{font-size:22vw}#tab-tender .tender-hero p{font-size:9px}#tab-tender>.tender-heading,#tab-tender>.kpis,#tab-tender>.grid{width:calc(100% - 32px)}.forest-credit{bottom:12px;left:16px}#tab-tender #tender-motion{bottom:12px;right:12px}#tab-tender #tender-start{bottom:55px}}
+@media(prefers-reduced-motion:reduce){.forest-fog,#tab-tender #tender-start span{animation:none}.forest-base,.forest-layer{transition:none}}
+body.big:has(#tab-tender.on){zoom:1}
+body.big #tab-tender>.grid{font-size:16px}
+
+.forest-layer{animation:forest-canopy 9s ease-in-out infinite alternate}.forest-right{animation-delay:-4s;animation-duration:12s}.motion-paused .forest-layer{animation-play-state:paused}
+@keyframes forest-canopy{from{rotate:-.7deg}to{rotate:.7deg}}
+@media(prefers-reduced-motion:reduce){.forest-layer{animation:none}}
+#tab-tender .flag.info{color:#35513d;background:#e1e6d6}#tab-tender .flag.warning{color:#775411;background:#eee3c8}#tab-tender .flag.danger{color:#913d32;background:#f5e2da}
+/* Hold the scene during scroll while its foliage opens away from the centre. */
+.forest-scroll{height:220svh;position:relative;background:#f4eedf}
+#tab-tender .forest-scroll .tender-hero{position:sticky;top:0;background:#f4eedf;overflow:hidden}
+.iron-forest{background:#f4eedf}.iron-forest:after{background:none}
+.forest-front{left:-25%;bottom:-40%;width:70%;height:105%;transform-origin:0 100%}
+.forest-back{right:-25%;bottom:-40%;width:70%;height:105%;transform-origin:100% 100%}
+.forest-layer,.forest-base{transition:transform .12s linear,opacity .12s linear}
+.tender-hero-copy{will-change:transform,opacity}
+#tab-tender>.tender-heading{padding-top:70px}
+@media(prefers-reduced-motion:reduce){.forest-scroll{height:100svh}.forest-layer,.forest-base{transition:none}}
+/* Organic upward reveal: one image, no overlapping tree layers. */
+.forest-scroll{height:200svh}
+.forest-reveal-copy{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 8%;text-align:center;color:#34432d;opacity:0}
+#tab-tender .forest-reveal-copy p{font:clamp(25px,3.7vw,56px)/1.12 Georgia,serif;color:#34432d;font-weight:400;letter-spacing:-1px;margin:0 0 28px}
+.forest-reveal-copy span{font-size:13px;color:#56604a}
+.iron-forest{background:transparent;z-index:1}.iron-forest:after{display:none}
+#forest-canvas{position:absolute;inset:0;width:100%;height:100%;display:none}
+.forest-surface-ready #forest-canvas{display:block}.forest-surface-ready .forest-base{display:none}
+.forest-base{transition:none}
+#tab-tender .tender-hero-copy{z-index:2}.forest-reveal-copy{z-index:0}
+@media(prefers-reduced-motion:reduce){.forest-scroll{height:100svh}}

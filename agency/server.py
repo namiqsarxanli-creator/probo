@@ -1,4 +1,4 @@
-"""Local HTTP API and panel for Sübut Agentliyi.
+"""Local HTTP API and panel for Probo.
 
 Same protections as the studio: loopback only, Host and Origin checks,
 a per-process CSRF token on every write, and a CSP that forbids inline
@@ -24,11 +24,50 @@ from agency.telegram import TelegramBridge, token_from
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / 'static'
 LOG = logging.getLogger(__name__)
-FILES = {'/': ('agency.html', 'text/html'), '/agency.js': ('agency.js', 'text/javascript'),
-         '/agency.css': ('agency.css', 'text/css')}
+FILES = {'/': ('welcome.html', 'text/html'), '/workspace': ('agency.html', 'text/html'),
+         '/welcome.css': ('welcome.css', 'text/css'), '/welcome.js': ('welcome.js', 'text/javascript'),
+         '/agency.js': ('agency.js', 'text/javascript'),
+         '/agency.css': ('agency.css', 'text/css'), '/capabilities.js': ('capabilities.js', 'text/javascript'),
+         '/capabilities.css': ('capabilities.css', 'text/css'),
+         # Mesaj Agentliyi skin; the display face is served locally because the CSP allows no font CDN.
+         '/soz.css': ('soz.css', 'text/css'),
+         '/fonts/unbounded-latin.woff2': ('fonts/unbounded-latin.woff2', 'font/woff2'),
+         '/fonts/unbounded-latin-ext.woff2': ('fonts/unbounded-latin-ext.woff2', 'font/woff2'),
+         # Komanda və HR skin: WebGL scenes drawn with a vendored three.js, since the CSP allows no script CDN.
+         '/team.css': ('team.css', 'text/css'), '/team3d.js': ('team3d.js', 'text/javascript'),
+         '/vendor/three.module.min.js': ('vendor/three.module.min.js', 'text/javascript'),
+         '/fonts/archivo-wide-latin.woff2': ('fonts/archivo-wide-latin.woff2', 'font/woff2'),
+         '/fonts/archivo-wide-latin-ext.woff2': ('fonts/archivo-wide-latin-ext.woff2', 'font/woff2'),
+         # İnsan yoxlaması skin.
+         '/review.css': ('review.css', 'text/css'),
+         # Sifariş və stok skin (3D dispenser drawn with the vendored three.js).
+         '/operations.css': ('operations.css', 'text/css'), '/ops3d.js': ('ops3d.js', 'text/javascript'),
+         # Tender: Componine-style chapters under the forest hero.
+         '/tender.css': ('tender.css', 'text/css'),
+         '/fonts/marcellus-latin.woff2': ('fonts/marcellus-latin.woff2', 'font/woff2'),
+         '/fonts/marcellus-latin-ext.woff2': ('fonts/marcellus-latin-ext.woff2', 'font/woff2'),
+         # Qərar xəritəsi skin.
+         '/trace.css': ('trace.css', 'text/css'),
+         '/fonts/chivo-mono-latin.woff2': ('fonts/chivo-mono-latin.woff2', 'font/woff2'),
+         '/fonts/chivo-mono-latin-ext.woff2': ('fonts/chivo-mono-latin-ext.woff2', 'font/woff2'),
+         # Siyasət skin.
+         '/policy.css': ('policy.css', 'text/css'), '/policy.js': ('policy.js', 'text/javascript'),
+         '/fonts/inter-tight-latin.woff2': ('fonts/inter-tight-latin.woff2', 'font/woff2'),
+         '/fonts/inter-tight-latin-ext.woff2': ('fonts/inter-tight-latin-ext.woff2', 'font/woff2'),
+         '/fonts/source-serif-latin.woff2': ('fonts/source-serif-latin.woff2', 'font/woff2'),
+         '/fonts/source-serif-latin-ext.woff2': ('fonts/source-serif-latin-ext.woff2', 'font/woff2')}
+
+# İnsan yoxlaması: public-domain paintings with halftone laptops composited in.
+for asset in ('review-syndics.webp', 'review-audit.webp', 'review-shadow.webp', 'review-peer.webp', 'review-regression.webp',
+              'policy-cloud-1.webp', 'policy-cloud-2.webp', 'policy-cloud-3.webp',
+              'tender-hands.webp', 'tender-scholar.webp', 'tender-portrait.webp'):
+    FILES['/' + asset] = (asset, 'image/webp')
+
+for asset in ('forest-hero.webp', 'forest-left.webp', 'forest-right.webp', 'forest-front.webp', 'forest-back.webp', 'forest-cloud.png'):
+    FILES['/' + asset] = (asset, 'image/png' if asset.endswith('.png') else 'image/webp')
 
 
-def make_handler(agency, bridge=None, sandbox=False):
+def make_handler(agency, bridge=None, sandbox=False, offline=False):
     token = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):
@@ -40,6 +79,8 @@ def make_handler(agency, bridge=None, sandbox=False):
                        'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; "
                                                   "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "
                                                   "base-uri 'none'; form-action 'self'"}
+            if urlsplit(self.path).path == '/':
+                headers['Content-Security-Policy'] += '; media-src https://assets.offloop.org'
             if download:
                 headers['Content-Disposition'] = f'attachment; filename="{download}"'
             for key, value in headers.items():
@@ -61,10 +102,14 @@ def make_handler(agency, bridge=None, sandbox=False):
             query = parse_qs(parts.query)
             try:
                 if parts.path == '/api/state':
-                    return self.reply(200, dict(agency.snapshot(), csrf=token, sandbox=sandbox,
+                    return self.reply(200, dict(agency.snapshot(), csrf=token, sandbox=sandbox, offline=offline,
                                                 telegram=bridge.status() if bridge else None))
                 if parts.path == '/api/document':
                     return self.reply(200, agency.document_body(query.get('id', [''])[0]))
+                if parts.path == '/api/trace':
+                    return self.reply(200, agency.decision_trace(query.get('job_id', [''])[0]))
+                if parts.path == '/api/company/fit':
+                    return self.reply(200, agency.company_fit(query.get('document_id', [''])[0]))
                 if parts.path == '/api/audit':
                     service = query.get('service', ['soz'])[0]
                     snap = agency.snapshot()
@@ -84,7 +129,7 @@ def make_handler(agency, bridge=None, sandbox=False):
             if parts.path not in FILES:
                 return self.reply(404, {'error': 'Tapılmadı.'})
             name, mime = FILES[parts.path]
-            self.reply(200, (STATIC / name).read_bytes(), mime + '; charset=utf-8')
+            self.reply(200, (STATIC / name).read_bytes(), mime if mime.startswith('font/') else mime + '; charset=utf-8')
 
         def do_POST(self):
             port = self.server.server_port
@@ -95,7 +140,9 @@ def make_handler(agency, bridge=None, sandbox=False):
                 size = int(self.headers.get('Content-Length', '0'))
             except ValueError:
                 size = -1
-            body = self.rfile.read(size) if 0 < size <= 200_000 else b''
+            # An uploaded tender file travels as base64 inside the JSON, so that route takes more.
+            limit = 12_000_000 if urlsplit(self.path).path == '/api/tender/file' else 200_000
+            body = self.rfile.read(size) if 0 < size <= limit else b''
             origin = self.headers.get('Origin')
             if (not self.host_ok() or (origin and origin not in (f'http://127.0.0.1:{port}', f'http://localhost:{port}'))
                     or not secrets.compare_digest(self.headers.get('X-CSRF-Token', ''), token)):
@@ -103,18 +150,24 @@ def make_handler(agency, bridge=None, sandbox=False):
             if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                 return self.reply(415, {'error': 'JSON tələb olunur.'})
             try:
-                if not 0 < size <= 200_000:
-                    raise ValueError('Sorğu ölçüsü uyğun deyil.')
+                if not 0 < size <= limit:
+                    raise ValueError('Fayl 8 MB-dan böyük olmamalıdır.' if limit > 200_000 else 'Sorğu ölçüsü uyğun deyil.')
                 data = json.loads(body)
                 if not isinstance(data, dict):
                     raise ValueError('JSON obyekt tələb olunur.')
                 path = urlsplit(self.path).path
                 actions = {
+                    '/api/operations/demo': lambda: agency.load_demo_operations(),
+                    '/api/operations/prepare': lambda: agency.prepare_exchange(data.get('order_id'), data.get('size')),
+                    '/api/operations/confirm': lambda: agency.confirm_exchange(data.get('exchange_id')),
+                    '/api/company': lambda: agency.save_company(data),
                     '/api/ticket': lambda: dict(job_id=agency.submit_ticket(data.get('message'))),
                     '/api/human': lambda: agency.human_reply(data.get('text')),
                     '/api/stress': lambda: dict(queued=agency.stress(int(data.get('count', 40)))),
                     '/api/tender': lambda: dict(job_id=agency.analyze_tender(data.get('document_id'))),
                     '/api/tender/upload': lambda: dict(document=_public(agency.add_tender(data.get('title'), data.get('body')))),
+                    '/api/tender/file': lambda: dict(document=_public(agency.add_tender_file(data.get('title'), data.get('name'),
+                                                                                              data.get('data')))),
                     '/api/policy': lambda: dict(document=_public(agency.update_policy(data.get('body')))),
                     '/api/mode': lambda: agency.set_mode(data.get('mode')) or {},
                     '/api/settings': lambda: agency.set_policy(data.get('policy')) or {},
@@ -210,7 +263,7 @@ def serve(replay=None, speed=10.0, rehearsal=False):
 
     worker = threading.Thread(target=loop, daemon=True)
     worker.start()
-    print(f'Sübut Agentliyi — http://127.0.0.1:{port}', flush=True)
+    print(f'Probo — http://127.0.0.1:{port}', flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

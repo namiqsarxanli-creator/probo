@@ -4,7 +4,7 @@ Python 3.10+ standart kitabxanası ilə işləyən lokal araşdırma şirkəti.
 
 ## Başlatmaq
 
-`py -3 research_studio.py` ilə başladın (əvvəl `main.py` idi; indi `main.py` Sübut Agentliyini açır) və http://127.0.0.1:8812 ünvanını açın.
+`py -3 research_studio.py` ilə başladın (əvvəl `main.py` idi; indi `main.py` Probo-nu açır) və http://127.0.0.1:8812 ünvanını açın.
 Port istifadə olunursa ikinci server başlatmayın. Yeni server üçün `PORT` dəyişənini seçin.
 
 ## Real AI bağlantısı

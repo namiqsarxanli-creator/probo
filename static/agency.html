@@ -3,25 +3,38 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sübut Agentliyi</title>
+<title>Probo</title>
 <link rel="stylesheet" href="/agency.css">
+<link rel="stylesheet" href="/capabilities.css">
+<link rel="stylesheet" href="/soz.css">
+<link rel="stylesheet" href="/team.css">
+<link rel="stylesheet" href="/review.css">
+<link rel="stylesheet" href="/policy.css">
+<link rel="stylesheet" href="/trace.css">
+<link rel="stylesheet" href="/operations.css">
+<link rel="stylesheet" href="/tender.css">
 <script src="/agency.js" defer></script>
+<script type="module" src="/team3d.js"></script>
+<script type="module" src="/ops3d.js"></script>
+<script src="/policy.js" defer></script>
+<script src="/capabilities.js" defer></script>
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <div class="mark">§</div>
-    <div><strong>Sübut Agentliyi</strong><small>AI işçiləri sözünə görə işə götürülür və çıxarılır</small></div>
+    <div><strong>Probo</strong><small>AI işçiləri sözünə görə işə götürülür və çıxarılır</small></div>
   </div>
   <nav id="tabs">
-    <button data-tab="soz" class="on">Söz Agentliyi</button>
+    <button data-tab="soz" class="on">Mesaj Agentliyi</button>
     <button data-tab="tender">Tender Agentliyi</button>
     <button data-tab="team">Komanda və HR</button>
     <button data-tab="review">İnsan yoxlaması</button>
     <button data-tab="policy">Siyasət</button>
+    <button data-tab="operations">Sifariş və stok</button>
+    <button data-tab="trace">Qərar xəritəsi</button>
   </nav>
-  <div class="status"><span id="spend">—</span><span id="link" class="dot">bağlantı</span>
-    <button id="big" type="button" title="Proyektor üçün böyük şrift">⛶ Təqdimat</button></div>
+  <div class="status"><span id="spend">—</span></div>
 </header>
 
 <div id="replay-bar" hidden>
@@ -33,124 +46,392 @@
 <main>
   <!-- SÖZ -->
   <section id="tab-soz" class="tab on">
+    <div class="soz-hero">
+      <svg class="sticker s-smile" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="#00FF06" stroke="#212121" stroke-width="3"/><circle cx="23" cy="27" r="3.5" fill="#212121"/><circle cx="41" cy="27" r="3.5" fill="#212121"/><path d="M20 38q12 11 24 0" fill="none" stroke="#212121" stroke-width="3.5" stroke-linecap="round"/></svg>
+      <svg class="sticker s-para" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="#EE8CF0" stroke="#212121" stroke-width="3"/><text x="32" y="44" text-anchor="middle" font-size="34" font-weight="800" fill="#212121" font-family="Unbounded, sans-serif">§</text></svg>
+      <svg class="sticker s-bubble" viewBox="0 0 72 64" aria-hidden="true"><path d="M8 8h56a4 4 0 0 1 4 4v30a4 4 0 0 1-4 4H30l-14 12v-12H8a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4z" fill="#FF9A1F" stroke="#212121" stroke-width="3" stroke-linejoin="round"/><path d="M22 27l7 7 14-14" fill="none" stroke="#212121" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="soz-eyebrow">MESAJ AGENTLİYİ · AI MÜŞTƏRİ DƏSTƏYİ</span>
+      <h1>Sübutsuz söz<br>müştəriyə <mark>getmir</mark></h1>
+      <p class="soz-lead">Hər cümlə şirkət qaydalarından hərfi sitatla gəlir. Rəqəm, tarix və qadağanı LLM yox, kod yoxlayır — yalan vəd bloklanır.</p>
+      <nav class="soz-pills" aria-label="Mesaj bölməsi">
+        <button type="button" data-scroll="soz-compose">Müştəri kimi yaz</button>
+        <button type="button" data-scroll="soz-feed">Müraciətlər</button>
+        <button type="button" data-scroll="soz-human">Yalanı özün yaz</button>
+        <button type="button" data-scroll="soz-rules">Qaydalar</button>
+      </nav>
+    </div>
+
     <div class="kpis" id="soz-kpis"></div>
-    <div class="grid">
-      <div class="col">
-        <div class="card compose live-only">
-          <h2>Müştəri kimi yaz <small id="telegram-link"></small></h2>
+
+    <div class="soz-ticker" aria-hidden="true"><div>
+      <span>sübutsuz söz yoxdur</span><i></i><span>yalan bloklanır</span><i></i><span>hər cümlə sitatla</span><i></i><span>rəqəmi kod yoxlayır</span><i></i>
+      <span>sübutsuz söz yoxdur</span><i></i><span>yalan bloklanır</span><i></i><span>hər cümlə sitatla</span><i></i><span>rəqəmi kod yoxlayır</span><i></i>
+    </div></div>
+
+    <div class="soz-compose live-only" id="soz-compose">
+      <h2 class="soz-h">Salam!</h2>
+      <form id="ticket-form" autocomplete="off">
+        <label class="madlib"><span>Mənim sualım</span>
+          <textarea name="message" rows="1" maxlength="2000" placeholder="paltarı 20 gün əvvəl almışam, qaytara bilərəm?" required></textarea></label>
+        <p class="soz-h small">Cavabı qaydalardan sitatla verin.</p>
+        <button class="soz-go" type="submit">göndər</button>
+        <div class="soz-compose-foot">
+          <button type="button" id="stress" class="soz-ghost">Stress testi — 40 etiketli müraciət</button>
+          <small id="telegram-link"></small>
           <a id="telegram-qr" href="/api/telegram/qr.svg" target="_blank" rel="noopener" hidden title="Böyütmək üçün klikləyin"><img alt="Telegram botunun QR kodu"></a>
-          <form id="ticket-form" autocomplete="off">
-            <textarea name="message" rows="2" maxlength="2000" placeholder="Məs.: Paltarı 20 gün əvvəl almışam, qaytara bilərəm?" required></textarea>
-            <div class="row">
-              <button class="primary" type="submit">Göndər</button>
-              <button type="button" id="stress" class="danger-ghost">Stress testi — 40 etiketli müraciət</button>
-            </div>
-          </form>
         </div>
-        <div class="card"><h2>Müraciətlər <small id="soz-queue"></small></h2><div id="tickets" class="feed"></div></div>
+      </form>
+    </div>
+
+    <div class="soz-grid">
+      <div class="soz-col" id="soz-feed">
+        <h2 class="soz-title">Müraciətlər <small id="soz-queue"></small></h2>
+        <div id="tickets" class="soz-feed"></div>
       </div>
-      <div class="col side">
-        <div class="card human">
-          <h2>İnsan agent <small>yalanı özünüz yazın — yoxlayıcı sizi də tutur</small></h2>
+      <div class="soz-col">
+        <div class="folder blue" id="soz-human">
+          <h3>Yalanı özün yaz</h3>
+          <p>Yoxlayıcı insanı da tutur. Bir vəd yazın — qaydada yoxdursa, bloklanacaq.</p>
           <form id="human-form" autocomplete="off">
-            <textarea name="text" rows="3" maxlength="2000" placeholder="Məs.: Salam! Məhsulu 30 gün ərzində qaytara bilərsiniz." required></textarea>
-            <button class="primary" type="submit">Göndərməzdən əvvəl yoxla</button>
+            <textarea name="text" rows="3" maxlength="2000" placeholder="Salam! Məhsulu otuz gün ərzində qaytara bilərsiniz." required></textarea>
+            <button class="soz-white" type="submit">Göndərməzdən əvvəl yoxla →</button>
           </form>
           <div id="human-result"></div>
         </div>
-        <div class="card"><h2>Qaydalar <small id="policy-version"></small></h2><div id="policy" class="doc"></div></div>
+        <div class="folder paper" id="soz-rules">
+          <h3>Qaydalar <small id="policy-version"></small></h3>
+          <div id="policy" class="doc"></div>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- TENDER -->
   <section id="tab-tender" class="tab">
+    <div class="cp-hero">
+      <img class="cp-paint" src="/tender-hands.webp" alt="" aria-hidden="true">
+      <svg class="cp-rose" viewBox="-500 -500 1000 1000" aria-hidden="true"><g fill="none" stroke="currentColor">
+  <circle r="120" stroke-width="1"/><circle r="260" stroke-width=".8"/><circle r="430" stroke-width=".6"/>
+  <path d="M0-480V480M-480 0H480M-340-340 340 340M340-340-340 340" stroke-width=".7"/>
+  <path d="M0-470 34-34 470 0 34 34 0 470-34 34-470 0-34-34Z" stroke-width="1.2"/>
+  <path d="M0-260 18-18 260 0 18 18 0 260-18 18-260 0-18-18Z" stroke-width="1"/>
+  <path d="M-120-470 120 470M120-470-120 470M-470-120 470 120M-470 120 470-120" stroke-width=".4"/></g></svg>
+      <div class="cp-hero-copy">
+        <span class="cp-pill"><i></i>Sübutla qərar · 2026</span>
+        <h2>Sənədi oxuyuruq. Tələbi tapırıq.<br>Sübutla qərar veririk.</h2>
+        <div class="cp-hero-side"><p>Tender sənədi uzundur, tələblər səpələnib. Üç müstəqil analitik eyni sənədi oxuyur, hər rəqəmi sitatla göstərir.</p>
+          <p>Kodla yoxlanmayan sahə karta düşmür — uydurma bloklanır, ziddiyyət işarələnir.</p></div>
+      </div>
+      <div class="cp-marquee" aria-hidden="true"><div>
+        <span>Son tarix</span><span>Təklif təminatı</span><span>Lisenziya</span><span>Dövriyyə tələbi</span><span>Oxşar təcrübə</span><span>Ödəniş şərtləri</span><span>Cərimələr</span><span>Texniki tələblər</span>
+        <span>Son tarix</span><span>Təklif təminatı</span><span>Lisenziya</span><span>Dövriyyə tələbi</span><span>Oxşar təcrübə</span><span>Ödəniş şərtləri</span><span>Cərimələr</span><span>Texniki tələblər</span>
+      </div></div>
+    </div>
+    <div class="tender-heading"><span>01 / İŞ MASASI</span><p>Sənədi seçin.<br><em>Detalları birlikdə yoxlayaq.</em></p></div>
+
+    <div class="cp-emboss" aria-hidden="true"><span>TENDER MASASI</span></div>
     <div class="kpis" id="tender-kpis"></div>
     <div class="grid">
       <div class="col side">
         <div class="card"><h2>Tender sənədləri</h2><div id="tender-docs" class="live-only"></div></div>
+        <div class="card live-only">
+          <h2>Şirkət profili və sübutlar</h2>
+          <p>Sənəd mətninə əsaslanan ilkin müqayisə. Autentiklik və yekun iştirak qərarı insan tərəfindən yoxlanılır.</p>
+          <form id="company-form">
+            <label>Şirkət adı<input name="name" required maxlength="160"></label>
+            <label>Sübut sənədinin mətni<textarea name="body" rows="7" required maxlength="30000" placeholder="2025 illik dövriyyə: 600 000 AZN.&#10;2025-05-10 tarixli oxşar müqavilə uğurla icra edilib: Müqavilə A."></textarea></label>
+            <button type="submit" class="primary">Profili saxla</button>
+          </form>
+          <button type="button" id="company-example">Nümunəni formaya yaz</button>
+          <button type="button" id="company-check">Seçilmiş tenderlə müqayisə et</button>
+        </div>
         <div class="card">
           <h2>Yeni tender əlavə et</h2>
           <form id="tender-form" class="live-only" autocomplete="off">
-            <input name="title" maxlength="160" placeholder="Tenderin adı" required>
-            <textarea name="body" rows="6" placeholder="Tender sənədinin mətni (başlıqlar # ilə)" required></textarea>
+            <input name="title" maxlength="160" placeholder="Tenderin adı (fayl seçsəniz, boş qala bilər)">
+            <label class="tender-drop" id="tender-drop">
+              <input type="file" name="file" accept=".pdf,.docx,.txt,.md">
+              <b id="tender-file-name">Faylı seçin və ya bura atın</b>
+              <small>PDF, Word (.docx) və ya TXT · ən çox 8 MB</small>
+            </label>
+            <p class="tender-or">və ya mətni yapışdırın</p>
+            <textarea name="body" rows="6" placeholder="Tender sənədinin mətni (başlıqlar # ilə)"></textarea>
             <button class="primary" type="submit">Əlavə et</button>
           </form>
         </div>
       </div>
       <div class="col">
         <div class="card"><h2>Tender kartı</h2><div id="tender-card" class="empty">Sənəd seçib «Analiz et» düyməsini basın.</div></div>
+        <div class="card"><h2>Şirkətin tenderə uyğunluğu</h2><div id="company-fit" class="empty">Şirkət sübutlarını daxil edib müqayisəni başladın.</div></div>
         <div class="card"><h2>Sənəd <small id="tender-title"></small></h2><div id="tender-doc" class="doc"></div></div>
       </div>
+    </div>
+
+    <div class="cp-band"><span>SÜBUTLU</span><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="7"><circle cx="50" cy="50" r="42"/><circle cx="50" cy="50" r="14"/><path d="M50 8v28M50 64v28M8 50h28M64 50h28M20 20l20 20M60 60l20 20M80 20 60 40M40 60 20 80"/></g></svg><span>QƏRAR</span></div>
+    <div class="cp-dark">
+      <figure class="cp-scholar"><img src="/tender-scholar.webp" alt="" loading="lazy"><figcaption>Holbein, «Erazm yazır», 1523 · ictimai mülkiyyət · noutbuk sonradan əlavə edilib</figcaption></figure>
+      <div class="cp-list">
+        <p class="cp-label">ANALİTİKLƏR NƏYİ YOXLAYIR</p>
+        <ol>
+          <li><span>SON TARİX VƏ MÜDDƏTLƏR</span><i>01</i></li>
+          <li><span>TƏKLİF TƏMİNATI</span><i>02</i></li>
+          <li><span>LİSENZİYA VƏ İCAZƏLƏR</span><i>03</i></li>
+          <li><span>MALİYYƏ TƏLƏBLƏRİ</span><i>04</i></li>
+          <li><span>OXŞAR TƏCRÜBƏ</span><i>05</i></li>
+          <li><span>ZİDDİYYƏTLƏR</span><i>06</i></li>
+          <li><span>UYDURMA BLOKLANIR</span><i>07</i></li>
+        </ol>
+      </div>
+    </div>
+    <div class="cp-frame-wrap">
+      <div class="cp-frame">
+        <div class="cp-mat">
+          <img src="/tender-portrait.webp" alt="" loading="lazy">
+          <svg class="cp-scribble" viewBox="0 0 400 300" aria-hidden="true"><path pathLength="1" d="M30 60c40-50 120-30 90 20s-110 30-60-30 150-20 120 40-130 40-70-20 160-50 140 20-90 60-50 10 120-40 150 10c20 30-40 40-10 70 40 40 110-10 120 30"/></svg>
+          <svg class="cp-laser" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M0 120 400 150"/></svg>
+          <span class="cp-tag bad">SİZİN PROBLEMİNİZ<small>200 səhifə, səpələnmiş tələblər</small></span>
+          <span class="cp-tag good">BİZİM HƏLLİMİZ<small>1 səhifəlik sübutlu kart</small></span>
+        </div>
+      </div>
+      <small class="cp-credit">Rembrandt, «Avtoportret», 1659 · National Gallery of Art, CC0 · eynək sonradan əlavə edilib</small>
     </div>
   </section>
 
   <!-- TEAM -->
   <section id="tab-team" class="tab">
-    <div class="grid">
-      <div class="col">
-        <div class="card"><h2>Söz Agentliyi komandası <small id="team-soz-meta"></small></h2><div id="team-soz" class="team"></div></div>
-        <div class="card"><h2>Tender Agentliyi komandası <small id="team-tender-meta"></small></h2><div id="team-tender" class="team"></div></div>
+    <div class="hr-hero">
+      <canvas id="hr-swirl" class="hr-canvas" aria-hidden="true"></canvas>
+      <div class="hr-hero-copy">
+        <h1>KADRLARI<br><span class="hr-inline"><canvas id="hr-mini" aria-hidden="true"></canvas>SÜBUTLA</span><br>İDARƏ ET</h1>
+        <p class="hr-lead">İmtahan, sınaq müddəti, xəbərdarlıq, işdən çıxarma və vəzifə artımı — hər qərarı statistik hədd verir və jurnala yazır. Heç bir kadr qərarını insan əl ilə vermir.</p>
       </div>
-      <div class="col side">
-        <div class="card"><h2>HR jurnalı</h2>
-          <div class="filters" id="journal-filters">
-            <button data-filter="hr" class="on">Kadr qərarları</button><button data-filter="all">Hamısı</button>
-          </div>
-          <div id="journal" class="journal"></div>
+      <button type="button" class="hr-go" data-scroll="hr-teams">KOMANDAYA BAX <span aria-hidden="true">↗</span></button>
+      <span class="hr-scroll" aria-hidden="true">AŞAĞI SÜRÜŞDÜR</span>
+    </div>
+
+    <div class="hr-statement">
+      <p class="hr-big">Niyə təxminə güvənəsiniz, əgər hər AI işçinin səhv payı 95% etimad intervalı ilə ölçülür?</p>
+      <div class="hr-statement-row">
+        <div class="hr-stats" id="hr-stats"></div>
+        <ol class="hr-list"><li><b>01</b> Yalnız real işə görə qiymət</li><li><b>02</b> Hər qərarın jurnalda izi</li><li><b>03</b> Qiymət, keyfiyyət, limit — hamısı hesabda</li></ol>
+      </div>
+    </div>
+
+    <div class="hr-rings">
+      <canvas id="hr-ring" class="hr-canvas" aria-hidden="true"></canvas>
+      <div class="hr-callout c1"><i>1</i><h3>İŞƏ QƏBUL<br>İMTAHANI</h3><p>Namizəd etiketli tapşırıqlardan keçir. Hədd <b id="hr-exam-pass">75%</b> — altında qalan işə götürülmür.</p></div>
+      <div class="hr-callout c2"><i>2</i><h3>WİLSON HƏDDİ İLƏ<br>İŞDƏN ÇIXARMA</h3><p>Bloklanma payının 95% aşağı sərhədi <b id="hr-fire-rate">10%</b>-i keçəndə — şans yox, sübut.</p></div>
+      <div class="hr-callout c3"><i>3</i><h3>BAŞ MÜTƏXƏSSİS<br>HİSTEREZİSİ</h3><p>Titul ən ucuz və etibarlı işçiyə keçir, amma yellənmir: rəqib ən azı 20% ucuz olmalıdır.</p></div>
+    </div>
+
+    <div class="hr-panels" id="hr-teams">
+      <article class="hr-panel">
+        <header><h2>MESAJ<br>AGENTLİYİ</h2><span class="hr-num">1</span></header>
+        <p class="hr-meta" id="team-soz-meta"></p>
+        <div id="team-soz" class="team"></div>
+      </article>
+      <article class="hr-panel">
+        <header><h2>TENDER<br>AGENTLİYİ</h2><span class="hr-num">2</span></header>
+        <p class="hr-meta" id="team-tender-meta"></p>
+        <div id="team-tender" class="team"></div>
+      </article>
+      <article class="hr-panel hr-journal">
+        <header><h2>HR<br>JURNALI</h2><span class="hr-num">3</span></header>
+        <div class="filters" id="journal-filters">
+          <button data-filter="hr" class="on">Kadr qərarları</button><button data-filter="all">Hamısı</button>
         </div>
-      </div>
+        <div id="journal" class="journal"></div>
+      </article>
     </div>
   </section>
 
   <!-- REVIEW -->
   <section id="tab-review" class="tab">
-    <div class="kpis six" id="review-kpis"></div>
-    <div class="grid">
-      <div class="col">
-        <div class="card"><h2>Yoxlama növbəsi <small>yoxlayıcıdan keçmiş cavablar — düzgündürmü?</small></h2>
-          <div id="review-queue" class="feed live-only"></div></div>
+    <div class="rv-hero">
+      <div class="rv-scene" aria-hidden="true"><div class="rv-pan">
+        <img class="rv-paint" src="/review-syndics.webp" alt="">
+        <div class="rv-dots"></div>
+        <i class="rv-gloss"></i><i class="rv-twinkle"></i><i class="rv-glow"></i>
+      </div></div>
+      <span class="rv-ribbon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2 8 8 2-8 2-2 8-2-8-8-2 8-2z" fill="currentColor"/></svg></span>
+      <div class="rv-copy">
+        <p class="rv-kicker">İNSAN YOXLAMASI</p>
+        <h1><span class="w">Son</span> <span class="w">söz</span><br><em><span class="w">insanındır.</span></em></h1>
+        <p class="rv-lead">Yoxlayıcı rəqəmi, tarixi və qadağanı tutur. Amma cavabın bu hala aid olub-olmadığını, tonunu və haqlı olduğunu insan deyir — və onun hökmü işçinin HR hesabına yazılır.</p>
+        <div class="rv-actions"><button type="button" class="rv-pill dark" data-scroll="rv-queue">Növbəyə keç</button><button type="button" class="rv-pill" data-scroll="rv-side">Son qərarlar</button></div>
       </div>
-      <div class="col side">
-        <div class="card"><h2>Reqressiya <small>qaydalar dəyişəndə</small></h2><div id="regression"></div></div>
-        <div class="card"><h2>Son qərarlar</h2><div id="review-recent" class="journal"></div></div>
+      <small class="rv-credit">Rembrandt, «Staalmeesters», 1662 · Rijksmuseum · ictimai mülkiyyət, noutbuklar sonradan əlavə edilib</small>
+    </div>
+
+    <div class="rv-eco">
+      <h2 class="rv-h">Yoxlamanın<br>dörd qatı</h2>
+      <p class="rv-sub">Hər qat başqa riski tutur: göndərilmiş səhvi, göndərilməmiş qaralamanı, həmkarın şübhəsini və qayda dəyişikliyini.</p>
+      <div class="rv-cards">
+        <article class="rv-card"><span>GÖNDƏRİLƏNDƏN SEÇMƏ</span><img class="rv-photo" src="/review-audit.webp" alt="" loading="lazy"><h3>Audit</h3><p>Göndərilmiş cavabların bir hissəsi təsadüfi seçilir; sınaq müddətindəki işçi üçün pay iki dəfə artır.</p><small class="rv-card-credit">Vermeer, «Tərəzi tutan qadın», t. 1664</small></article>
+        <article class="rv-card"><span>GÖNDƏRİLMƏDƏN ƏVVƏL</span><img class="rv-photo" src="/review-shadow.webp" alt="" loading="lazy"><h3>Kölgə<br>rejimi</h3><p>AI cavabı müştəriyə getmir — insan öz cavabını yazır, yoxlayıcı onu da yoxlayır.</p><small class="rv-card-credit">Ter Borch, «Məktub yazan qadın», t. 1655</small></article>
+        <article class="rv-card"><span>BAŞQA MODEL</span><img class="rv-photo" src="/review-peer.webp" alt="" loading="lazy"><h3>Həmkar<br>şübhəsi</h3><p>Başqa provayderin işçisi sitatın bu hala aid olduğunu yoxlayır; şübhə varsa cavab saxlanılır.</p><small class="rv-card-credit">Reymerswale emalatxanası, «İki vergi yığan», XVI əsr</small></article>
+        <article class="rv-card"><span>QAYDA DƏYİŞƏNDƏ</span><img class="rv-photo" src="/review-regression.webp" alt="" loading="lazy"><h3>Reqressiya</h3><p>Yeni siyasət versiyası köhnə cavabları, imtahanı və audit səhvlərini yenidən sınayır.</p><small class="rv-card-credit">Vermeer, «Coğrafiyaşünas», 1669</small></article>
       </div>
+    </div>
+
+    <div class="rv-numbers">
+      <p class="rv-h small">Ölçülən etibar</p>
+      <div class="kpis six" id="review-kpis"></div>
+    </div>
+
+    <div class="rv-desk">
+      <div class="rv-queue" id="rv-queue">
+        <h2 class="rv-h">Yoxlama növbəsi</h2>
+        <p class="rv-sub">Yoxlayıcıdan keçmiş cavablar — düzgündürmü? Hökmünüz işçinin hesabına yazılır.</p>
+        <div id="review-queue" class="feed live-only"></div>
+      </div>
+      <aside class="rv-side" id="rv-side">
+        <div class="rv-panel"><h3>Reqressiya <small>qaydalar dəyişəndə</small></h3><div id="regression"></div></div>
+        <div class="rv-panel"><h3>Son qərarlar</h3><div id="review-recent" class="journal"></div></div>
+      </aside>
     </div>
   </section>
 
   <!-- POLICY -->
   <section id="tab-policy" class="tab live-only">
-    <div class="grid">
-      <div class="col">
-        <div class="card">
-          <h2>İş rejimi</h2>
-          <div class="modes" id="modes">
-            <button data-mode="shadow"><b>Kölgə</b><small>Cavab hazırlanır, göndərilmir — müqayisə üçün</small></button>
-            <button data-mode="draft"><b>Qaralama</b><small>Əməkdaş bir kliklə təsdiqləyir</small></button>
-            <button data-mode="auto"><b>Avtomatik</b><small>Yoxlamadan keçən cavab göndərilir</small></button>
-          </div>
-          <div id="readiness" class="readiness"></div>
-        </div>
-        <div class="card">
-          <h2>Şirkət siyasəti</h2>
-          <form id="settings-form" class="settings">
-            <label>Xəbərdarlıq həddi (bloklanma payı)<input name="warn_rate" type="number" step="any" min="0.01" max="0.9"></label>
-            <label>İşdən çıxarma həddi (95% aşağı sərhəd)<input name="fire_rate" type="number" step="any" min="0.01" max="0.9"></label>
-            <label>Sınaq müddəti (cavab sayı)<input name="probation" type="number" step="1" min="3" max="100"></label>
-            <label>İşə qəbul imtahanı keçid balı<input name="exam_pass" type="number" step="any" min="0.1" max="1"></label>
-            <label>Aylıq büdcə (USD)<input name="monthly_budget_usd" type="number" step="any" min="0.01" max="1000"></label>
-            <label>Audit payı (göndərilən cavabların neçəsini insan yoxlasın)<input name="audit_rate" type="number" step="any" min="0" max="1"></label>
-            <label>Həmkar rəyi (1 = başqa model hər cavabı yoxlayır, 0 = bağlı)<input name="peer_review" type="number" step="1" min="0" max="1"></label>
-            <button class="primary" type="submit">Saxla</button>
-          </form>
+    <div class="pl-hero">
+      <img class="pl-cloud c1" src="/policy-cloud-1.webp" alt="" aria-hidden="true">
+      <img class="pl-cloud c2" src="/policy-cloud-2.webp" alt="" aria-hidden="true">
+      <img class="pl-cloud c3" src="/policy-cloud-3.webp" alt="" aria-hidden="true">
+      <div class="pl-flight" aria-hidden="true"><svg class="pl-plane" viewBox="0 0 120 80" aria-hidden="true"><path d="M2 38 118 4 70 76 52 50z" fill="#fff6ee"/><path d="M2 38 52 50 118 4z" fill="#f6d6cf"/><path d="M52 50 60 72 70 76z" fill="#e7b8b4"/><path d="M52 50 118 4" stroke="#d99f9b" stroke-width="1.2" fill="none"/></svg></div>
+      <span class="pl-tag">Şirkətin qayda kitabı</span>
+      <h1><span>Bir qayda,</span><span>min cavab.</span></h1>
+      <p class="pl-lead">Qaydanı bir dəfə yazırsınız. Agentlik onu hər cavabda hərfi sitatla yoxlayır, dəyişəndə isə köhnə cavabları və komandanı yenidən sınayır.</p>
+      <button type="button" class="pl-cta" data-scroll="pl-rules">Qaydaları redaktə et</button>
+    </div>
+
+    <div class="pl-modes-wrap">
+      <p class="pl-kicker">İş rejimi</p>
+      <h2 class="pl-h">Agentliyə nə qədər sərbəstlik verirsiniz?</h2>
+      <div class="modes" id="modes">
+        <button data-mode="shadow"><i>1</i><b>Kölgə</b><small>Cavab hazırlanır, göndərilmir — müqayisə üçün</small></button>
+        <button data-mode="draft"><i>2</i><b>Qaralama</b><small>Əməkdaş bir kliklə təsdiqləyir</small></button>
+        <button data-mode="auto"><i>3</i><b>Avtomatik</b><small>Yoxlamadan keçən cavab göndərilir</small></button>
+      </div>
+      <div id="readiness" class="readiness"></div>
+    </div>
+
+    <div class="pl-vision">
+      <div class="pl-steps">
+        <p class="pl-kicker">Necə işləyir</p>
+        <h2 class="pl-h">Qayda yaşayan sistemdir</h2>
+        <ol>
+          <li class="on"><i>1</i><b>Qayda yazılır</b><span>Siyasət mətni agentliyin yeganə həqiqət mənbəyidir. Hər dəyişiklik yeni versiyadır.</span></li>
+          <li><i>2</i><b>Hər cümlə sitatla yoxlanır</b><span>Cavabdakı rəqəm, tarix və qadağa mətnlə tutuşdurulur — sitatsız söz müştəriyə getmir.</span></li>
+          <li><i>3</i><b>Dəyişəndə hamı yenidən sınanır</b><span>Köhnə cavablar, imtahan sualları və audit səhvləri yeni versiya ilə yenidən yoxlanır.</span></li>
+        </ol>
+      </div>
+      <div class="pl-orb-box" aria-hidden="true"><canvas id="pl-orb"></canvas><span class="pl-orb-label">Qaydalar</span>
+        <span class="pl-node n1">Mesaj</span><span class="pl-node n2">Tender</span><span class="pl-node n3">Komanda</span></div>
+    </div>
+
+    <div class="pl-desk">
+      <div class="pl-panel">
+        <p class="pl-kicker">Şirkət siyasəti</p>
+        <h2 class="pl-h small">Hədlər və büdcə</h2>
+        <form id="settings-form" class="settings">
+          <label>Xəbərdarlıq həddi (bloklanma payı)<input name="warn_rate" type="number" step="any" min="0.01" max="0.9"></label>
+          <label>İşdən çıxarma həddi (95% aşağı sərhəd)<input name="fire_rate" type="number" step="any" min="0.01" max="0.9"></label>
+          <label>Sınaq müddəti (cavab sayı)<input name="probation" type="number" step="1" min="3" max="100"></label>
+          <label>İşə qəbul imtahanı keçid balı<input name="exam_pass" type="number" step="any" min="0.1" max="1"></label>
+          <label>Aylıq büdcə (USD)<input name="monthly_budget_usd" type="number" step="any" min="0.01" max="1000"></label>
+          <label>Audit payı (göndərilən cavabların neçəsini insan yoxlasın)<input name="audit_rate" type="number" step="any" min="0" max="1"></label>
+          <label>Həmkar rəyi (1 = başqa model hər cavabı yoxlayır, 0 = bağlı)<input name="peer_review" type="number" step="1" min="0" max="1"></label>
+          <button class="primary" type="submit">Saxla</button>
+        </form>
+      </div>
+      <div class="pl-letter" id="pl-rules">
+        <p class="pl-kicker">Qaydalar sənədi</p>
+        <h2 class="pl-h small">Dəyişiklik yeni versiya yaradır</h2>
+        <form id="policy-form"><textarea name="body" rows="22"></textarea><button class="primary" type="submit">Yeni versiyanı saxla</button></form>
+      </div>
+    </div>
+    <div class="pl-sky-end" aria-hidden="true"><img class="pl-cloud c4" src="/policy-cloud-2.webp" alt=""><img class="pl-cloud c5" src="/policy-cloud-3.webp" alt=""></div>
+  </section>
+  <section id="tab-operations" class="tab live-only">
+    <div class="op-hero">
+      <div class="op-copy">
+        <span class="op-test">TEST MƏLUMATLARI · lokal nümayiş bazası</span>
+        <h1>Sifarişi agent oxuyur, stoku kod sayır</h1>
+        <p class="op-lead">Müştəri «48213 nömrəli sifarişim haradadır?» yazanda agent lokal alətlə sifarişi və stoku oxuyur. Bu məlumat AI provayderinə göndərilmir.</p>
+        <div class="op-actions">
+          <button id="load-operations" type="button" class="op-btn">Test sifarişlərini və stoku yüklə</button>
+          <button type="button" class="op-link" data-scroll="op-exchange">Ölçü dəyişmə <span aria-hidden="true">›</span></button>
         </div>
       </div>
-      <div class="col side">
-        <div class="card">
-          <h2>Qaydalar sənədi <small>dəyişiklik yeni versiya yaradır</small></h2>
-          <form id="policy-form"><textarea name="body" rows="22"></textarea><button class="primary" type="submit">Yeni versiyanı saxla</button></form>
-        </div>
+      <div class="op-stage" aria-hidden="true"><canvas id="op-machine"></canvas></div>
+    </div>
+
+    <div class="op-intro">
+      <div><p class="op-kicker">Stok və sifariş alətləri</p><h2>Hər ölçü — öz kamerasında</h2></div>
+      <p>Avtomatdakı hər rəng bir ölçüdür: yaşıl S, mavi M, narıncı L. Stok azaldıqca kürələr azalır, bitən ölçünün rəngi avtomatdan itir. Dəyişmə təsdiqlənəndə əvəzləyici ölçü dərhal rezerv olunur.</p>
+    </div>
+
+    <div class="op-sizes" id="op-sizes"></div>
+    <div id="operation-stock" class="op-raw" hidden></div>
+
+    <div class="op-stats" id="op-stats"></div>
+
+    <div class="op-grid">
+      <div class="op-card">
+        <p class="op-kicker">Test sifarişləri</p>
+        <div id="operation-orders"></div>
       </div>
+      <div class="op-card" id="op-exchange">
+        <p class="op-kicker">Ölçü dəyişmə müraciəti</p>
+        <form id="exchange-form"><label>Test sifariş nömrəsi<input name="order_id" value="48213" required></label>
+        <label>Yeni ölçü<select name="size"><option>S</option><option>M</option><option selected>L</option></select></label>
+        <button type="submit" class="primary">Şərtləri yoxla və müraciət hazırla</button></form>
+        <div id="exchange-preview"></div>
+        <p class="op-kicker op-gap">Əməliyyat jurnalı</p>
+        <div id="operation-exchanges"></div>
+      </div>
+    </div>
+  </section>
+  <section id="tab-trace" class="tab">
+    <div class="tr-hero">
+      <svg class="tr-defs" aria-hidden="true" focusable="false"><filter id="tr-fur" x="-10%" y="-20%" width="120%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="n"><animate attributeName="seed" values="3;8;13;21;3" dur="0.9s" repeatCount="indefinite"/></feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+      <div class="tr-logo" aria-hidden="true"><span>probo</span></div>
+      <div class="tr-worlds" aria-hidden="true"><div class="tr-track">
+          <figure class="tr-world w-ask"><div><i></i><i></i><i></i><i></i><i></i><i></i></div><figcaption>01 · MÜRACİƏT</figcaption></figure>
+          <figure class="tr-world w-agent"><div><i></i><i></i><i></i></div><figcaption>02 · AGENT</figcaption></figure>
+          <figure class="tr-world w-quote"><div><p>«Məhsul 14 gün ərzində qaytarıla bilər.» «Endirimli məhsullar qaytarılmır.» «Pul 5 iş günü ərzində qaytarılır.» «Ölçü 14 gün ərzində dəyişdirilir.» «Məhsul 14 gün ərzində qaytarıla bilər.» «Endirimli məhsullar qaytarılmır.»</p></div><figcaption>03 · SİTAT</figcaption></figure>
+          <figure class="tr-world w-check"><div><i></i><b>✓</b></div><figcaption>04 · KOD YOXLAMASI</figcaption></figure>
+          <figure class="tr-world w-done"><div><i></i><i></i><i></i></div><figcaption>05 · YEKUN</figcaption></figure>
+          <figure class="tr-world w-ask"><div><i></i><i></i><i></i><i></i><i></i><i></i></div><figcaption>01 · MÜRACİƏT</figcaption></figure>
+          <figure class="tr-world w-agent"><div><i></i><i></i><i></i></div><figcaption>02 · AGENT</figcaption></figure>
+          <figure class="tr-world w-quote"><div><p>«Məhsul 14 gün ərzində qaytarıla bilər.» «Endirimli məhsullar qaytarılmır.» «Pul 5 iş günü ərzində qaytarılır.» «Ölçü 14 gün ərzində dəyişdirilir.» «Məhsul 14 gün ərzində qaytarıla bilər.» «Endirimli məhsullar qaytarılmır.»</p></div><figcaption>03 · SİTAT</figcaption></figure>
+          <figure class="tr-world w-check"><div><i></i><b>✓</b></div><figcaption>04 · KOD YOXLAMASI</figcaption></figure>
+          <figure class="tr-world w-done"><div><i></i><i></i><i></i></div><figcaption>05 · YEKUN</figcaption></figure>
+      </div></div>
+      <div class="tr-intro">
+        <p class="tr-mono">QƏRAR XƏRİTƏSİ</p>
+        <h1>Hər qərarın yolu görünür.</h1>
+        <p>Müraciətdən yekun cavaba qədər: hansı işçi yazdı, hansı aləti çağırdı, hansı sitat kodla yoxlandı və nə qədər vaxt, nə qədər pul getdi.</p>
+      </div>
+    </div>
+
+    <div class="tr-pick">
+      <p class="tr-mono">SON QƏRARLAR</p>
+      <div id="trace-recent" class="tr-recent"></div>
+    </div>
+
+    <div class="tr-board">
+      <div class="tr-map">
+        <p class="tr-mono">YOL</p>
+        <div id="decision-map"><p class="tr-empty">Yuxarıdan bir müraciət seçin və ya müraciət kartında «Qərarın yolunu göstər» düyməsini basın.</p></div>
+      </div>
+      <aside class="tr-source">
+        <p class="tr-mono">SÜBUT</p>
+        <div id="decision-source"><p class="tr-empty">Xəritədə sitata klikləyin — qaydalar mətnində harada yazıldığı işıqlanacaq.</p></div>
+      </aside>
     </div>
   </section>
 </main>

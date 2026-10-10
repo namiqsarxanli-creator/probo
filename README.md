@@ -1,4 +1,4 @@
-# Layihe5 — Sübut Agentliyi
+# Layihe5 — Probo
 
 **Əsas layihə: [README_AGENTLIK.md](README_AGENTLIK.md)** — AI işçiləri sözünə görə işə götürülür və çıxarılır.
 Təqdimat üçün: [DEMO_SSENARI.md](DEMO_SSENARI.md).

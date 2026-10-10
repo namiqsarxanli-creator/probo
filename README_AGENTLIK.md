@@ -1,10 +1,10 @@
-# Sübut Agentliyi
+# Probo
 
 **AI işçiləri sözünə görə işə götürülür və çıxarılır.**
 
 Biznesə iki xidmət göstərən, öz komandasını özü idarə edən AI agentliyi:
 
-- **Söz Agentliyi** — müştəri dəstəyi. Müştəriyə gedən hər cümlə şirkətin yazılı qaydalarından hərfi sitatla sübut olunur.
+- **Mesaj Agentliyi** — müştəri dəstəyi. Müştəriyə gedən hər cümlə şirkətin yazılı qaydalarından hərfi sitatla sübut olunur.
 - **Tender Agentliyi** — tender sənədindən iştirak qərarı üçün kart: son tarix, təminatlar, tələblər, cərimələr. Hər sahə sənəddəki cümləyə bağlıdır.
 
 ## Problem
@@ -210,7 +210,7 @@ py -3 -m unittest discover -s tests
 | Fayl | Rolu |
 |---|---|
 | `agency/guard.py` | Determinstik yoxlayıcı |
-| `agency/support.py` | Söz Agentliyi: təlimat, sxem, qiymətləndirmə |
+| `agency/support.py` | Mesaj Agentliyi: təlimat, sxem, qiymətləndirmə |
 | `agency/tender.py` | Tender kartı, birləşdirmə, risk bayraqları |
 | `agency/workforce.py` | Modellər, maaşlar, Wilson, HR siyasəti |
 | `agency/engine.py` | İş növbəsi, imtahanlar, temp, yenidən yoxlama, audit, reqressiya, təkrar |

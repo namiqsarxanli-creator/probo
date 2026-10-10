@@ -6,7 +6,7 @@ from pathlib import Path
 
 from app.provider import RateLimitError
 from agency import guard, tender
-from agency.engine import Agency, SAMPLES
+from agency.engine import HEADCOUNT, Agency, SAMPLES
 
 CASES = json.loads((SAMPLES / 'bazarim_muracietler.json').read_text(encoding='utf-8'))
 BY_MESSAGE = {c['message']: c for c in CASES}
@@ -113,11 +113,11 @@ class StaffingTest(EngineCase):
         self.build()
         self.run_until_idle()
         soz = self.agency.snapshot()['services']['soz']
-        self.assertEqual(len([w for w in soz['workers'] if w['status'] == 'probation']), 3)
+        self.assertEqual(len([w for w in soz['workers'] if w['status'] == 'probation']), HEADCOUNT['soz'])
         first = soz['workers'][0]
         self.assertEqual((first['model'], first['persona']), ('openai/gpt-oss-20b', 'diqqetli'))  # cheapest first
         self.assertEqual(first['exam_score'], 1.0)
-        self.assertEqual(len(self.journal('hire')), 5)  # 3 support + 2 tender
+        self.assertEqual(len(self.journal('hire')), HEADCOUNT['soz'] + HEADCOUNT['tender'])
         self.assertGreater(soz['kpi']['exam_cost'], 0)
 
     def test_candidate_who_fails_the_exam_is_not_hired(self):
@@ -188,7 +188,7 @@ class FiringTest(EngineCase):
         fired = self.journal('fire')[0]['message']
         self.assertIn(liar['name'], fired)
         self.assertIn('95% interval', fired)
-        self.assertEqual(len(self.agency.staffed('soz')), 3)  # the seat was refilled
+        self.assertEqual(len(self.agency.staffed('soz')), HEADCOUNT['soz'])  # the seat was refilled
         blocked = [j for j in self.agency.snapshot()['services']['soz']['jobs']
                    if any(a['outcome'] == 'blocked' for a in j['attempts'])]
         self.assertTrue(blocked)

@@ -42,6 +42,19 @@ class AgencyHttpTest(unittest.TestCase):
         with urllib.request.urlopen(request, timeout=10) as response:
             return json.loads(response.read())
 
+    def test_operations_and_company_routes(self):
+        loaded = self.post('/api/operations/demo', {})
+        self.assertEqual(2, len(loaded['orders']))
+        prepared = self.post('/api/operations/prepare', {'order_id':'48213','size':'L'})
+        confirmed = self.post('/api/operations/confirm', {'exchange_id':prepared['id']})
+        self.assertEqual('confirmed', confirmed['state'])
+        self.post('/api/company', {'name':'Test MMC','body':'2025 illik dövriyyə: 100 000 AZN.'})
+        did = self.get('/api/state')['tenders'][0]['id']
+        self.assertEqual('fails',self.get('/api/company/fit?document_id='+did)['outcome'])
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.post('/api/operations/demo', {}, token=False)
+        self.assertEqual(403, error.exception.code)
+
     def status_of(self, call):
         with self.assertRaises(urllib.error.HTTPError) as caught:
             call()
@@ -99,7 +112,7 @@ class AgencyHttpTest(unittest.TestCase):
     def test_panel_is_served_with_a_strict_policy(self):
         with urllib.request.urlopen(f'http://127.0.0.1:{self.port}/', timeout=10) as response:
             self.assertIn("style-src 'self'", response.headers['Content-Security-Policy'])
-            self.assertIn('Sübut Agentliyi', response.read().decode())
+            self.assertIn('Probo', response.read().decode())
 
 
 if __name__ == '__main__':

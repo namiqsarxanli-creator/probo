@@ -140,6 +140,17 @@ def verdict_end(verdict):
     return verdict['span'][1]
 
 
+class PersonalEndingTest(unittest.TestCase):
+    def test_negation_with_personal_endings(self):
+        # Seen live on Gemini 2.5 Flash-Lite (08.10.2026): a correct "no" was blocked as a permission.
+        for sentence in ('Endirimli köynəyi qaytara bilməzsiniz.', 'Məhsulu qaytarmırsınız?', 'Biz bunu edə bilmərik.'):
+            self.assertTrue(guard.is_negative(sentence), sentence)
+        for sentence in ('Mərkəzi Bankın tələbləri', 'Kamera məzmunu', '14 gün ərzində qaytara bilərsiniz.'):
+            self.assertFalse(guard.is_negative(sentence), sentence)
+        doc = 'Endirimli məhsullar qaytarılmır.'
+        self.assertTrue(guard.check('Endirimli köynəyi qaytara bilməzsiniz.', 'Endirimli məhsullar qaytarılmır', doc)['ok'])
+
+
 if __name__ == '__main__':
     unittest.main()
 
