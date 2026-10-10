@@ -4,6 +4,8 @@
 
 🇦🇿 [Azərbaycan dilində](README.az.md)
 
+![Live replay: a peer reviewer holds an answer, and a sabotaged prompt is flagged](docs/screenshots/05-team-live.jpg)
+
 Probo runs two AI services for a business and manages its own AI workforce:
 
 - **Message Agency** — customer support. Every sentence sent to a customer must be backed by a
@@ -119,6 +121,15 @@ Measured on Groq, 06–07.10.2026.
   firing logic is proven in tests with a simulated lying worker.
 - **The data is fictional:** the sample shop ("Bazarım") and the sample tenders are made up, and the
   documents themselves say so.
+
+## Screenshots
+
+| | |
+|---|---|
+| <img src="docs/screenshots/01-landing.jpg" alt="Landing"><br><sub>Landing</sub> | <img src="docs/screenshots/02-message-agency.jpg" alt="Message Agency — every sentence backed by a quote"><br><sub>Message Agency — every sentence backed by a quote</sub> |
+| <img src="docs/screenshots/03-tender-agency.jpg" alt="Tender Agency — document to go/no-go card"><br><sub>Tender Agency — document to go/no-go card</sub> | <img src="docs/screenshots/04-team-hr.jpg" alt="Team & HR — hiring and firing on statistics"><br><sub>Team & HR — hiring and firing on statistics</sub> |
+| <img src="docs/screenshots/06-human-review.jpg" alt="Human review — the last word is human"><br><sub>Human review — the last word is human</sub> | <img src="docs/screenshots/07-policy.jpg" alt="Policy — one rule, a thousand answers"><br><sub>Policy — one rule, a thousand answers</sub> |
+| <img src="docs/screenshots/08-orders-stock.jpg" alt="Orders & stock — tools read, code counts"><br><sub>Orders & stock — tools read, code counts</sub> | <img src="docs/screenshots/09-decision-map.jpg" alt="Decision map — every decision's path is visible"><br><sub>Decision map — every decision's path is visible</sub> |
 
 ## Run it
 
